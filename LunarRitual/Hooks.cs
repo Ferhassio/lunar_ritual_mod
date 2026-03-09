@@ -7,6 +7,7 @@ using MonoMod.Cil;
 using RoR2;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.AddressableAssets;
 
 namespace LunarRitual
 {
@@ -213,7 +214,7 @@ namespace LunarRitual
 
 			PickupIndex shardIndex = PickupCatalog.FindPickupIndex("LunarCoin.Coin0");
 
-			PickupDropletController.CreatePickupDroplet(shardIndex, dropPosition, dropPosition);
+			PickupDropletController.CreatePickupDroplet(shardIndex, dropPosition, Vector3.zero);
 
 			Log.Warning($"[LunarRitual] Shard droplet created at {dropPosition}");
 		}
