@@ -376,7 +376,7 @@ namespace LunarRitual
 				var root = new GameObject("GenesisShardVisual");
 				root.transform.SetParent(transform, false);
 				// Lift a bit so it doesn't clip into the ground.
-				root.transform.localPosition = new Vector3(0f, 0.22f, 0f);
+				root.transform.localPosition = new Vector3(0f, 0.55f, 0f);
 				root.transform.localRotation = Quaternion.identity;
 				root.transform.localScale = Vector3.one;
 
