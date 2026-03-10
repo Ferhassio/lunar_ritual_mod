@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using R2API;
 using R2API.Utils;
 using RoR2;
+using RoR2.ContentManagement;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.Networking;
@@ -122,22 +123,37 @@ namespace LunarRitual
 				{
 					Log.Warning($"[LunarRitual] LunarCoin prefab loaded: {lunarCoinPrefab.name}");
 
-					// Build a display prefab by cloning the LunarCoin pickup prefab, then stripping pickup logic.
-					// This keeps all the visuals/VFX hierarchy RoR2 expects for droplet displays.
-					genesisShardPrefab = CreateGenesisShardDisplayPrefab(lunarCoinPrefab);
+					// Build a display prefab from the *dropletDisplayPrefab* of Lunar Coin.
+					// Using the pickup prefab here can cause the model to disappear on landing.
+					GameObject lunarCoinDisplayPrefab = GetLunarCoinDropletDisplayPrefab();
+					if (!lunarCoinDisplayPrefab)
+					{
+						Log.Error("[LunarRitual] Failed to resolve LunarCoin dropletDisplayPrefab, falling back to pickup prefab (may be buggy)");
+						lunarCoinDisplayPrefab = lunarCoinPrefab;
+					}
+
+					genesisShardPrefab = CreateGenesisShardDisplayPrefab(lunarCoinDisplayPrefab);
 					Log.Warning("[LunarRitual] GenesisShard display prefab created");
 
-					MeshRenderer meshRenderer = genesisShardPrefab.transform.Find("Coin5Mesh")?.GetComponent<MeshRenderer>();
-					if (meshRenderer != null)
+					Renderer[] renderers = genesisShardPrefab.GetComponentsInChildren<Renderer>(true);
+					if (renderers != null && renderers.Length > 0)
 					{
-						Log.Warning("[LunarRitual] Coin5Mesh found, setting material");
+						Log.Warning($"[LunarRitual] Found {renderers.Length} Renderer(s), setting material on mesh renderers");
 						Material material = Addressables.LoadAssetAsync<Material>("RoR2/Base/Common/VFX/matLunarCoinPlaceholder.mat").WaitForCompletion();
 						if (material != null)
 						{
-							meshRenderer.material = material;
 							Color genesisColor = new Color(1f, 0.4f, 0.4f, 1f);
-							meshRenderer.material.SetColor("_Color", genesisColor);
-							meshRenderer.material.SetColor("_EmColor", new Color(1f, 0.2f, 0.2f, 1f));
+							foreach (var r in renderers)
+							{
+								if (!r) continue;
+								// Only touch mesh-like renderers (avoid particle/trail/line renderers).
+								if (r is MeshRenderer || r is SkinnedMeshRenderer)
+								{
+									r.sharedMaterial = material;
+									r.sharedMaterial.SetColor("_Color", genesisColor);
+									r.sharedMaterial.SetColor("_EmColor", new Color(1f, 0.2f, 0.2f, 1f));
+								}
+							}
 							Log.Warning("[LunarRitual] Material set successfully");
 						}
 						else
@@ -147,7 +163,7 @@ namespace LunarRitual
 					}
 					else
 					{
-						Log.Error("[LunarRitual] Coin5Mesh not found in GenesisShard display prefab");
+						Log.Error("[LunarRitual] No Renderer found in GenesisShard display prefab");
 					}
 
 					Light light = genesisShardPrefab.GetComponentInChildren<Light>();
@@ -185,6 +201,7 @@ namespace LunarRitual
 
 			GameObject display = GameObject.Instantiate(lunarCoinPickupPrefab);
 			display.name = "GenesisShardDisplay";
+			// Keep active=true for compatibility: some RoR2 builds don't re-activate inactive display prefabs.
 			display.SetActive(true);
 
 			// Strip interactive/physics components; droplet handles interaction separately.
@@ -206,6 +223,29 @@ namespace LunarRitual
 			// Ensure consistent layer.
 			SetLayerRecursive(display, LayerIndex.pickups.intVal);
 			return display;
+		}
+
+		private static GameObject GetLunarCoinDropletDisplayPrefab()
+		{
+			try
+			{
+				// Resolve pickup def at runtime to get the exact display prefab RoR2 uses.
+				PickupIndex lunarCoinPickupIndex = PickupCatalog.FindPickupIndex(RoR2Content.MiscPickups.LunarCoin.miscPickupIndex);
+				if (lunarCoinPickupIndex != PickupIndex.none)
+				{
+					PickupDef def = lunarCoinPickupIndex.pickupDef;
+					if (def != null && def.dropletDisplayPrefab)
+					{
+						return def.dropletDisplayPrefab;
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				Log.Error($"[LunarRitual] Exception while resolving LunarCoin dropletDisplayPrefab: {ex.Message}");
+			}
+
+			return null;
 		}
 
 		private static void SetLayerRecursive(GameObject obj, int layer)

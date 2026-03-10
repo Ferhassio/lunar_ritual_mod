@@ -26,7 +26,7 @@ namespace LunarRitual
 		On.RoR2.GenericPickupController.OnInteractionBegin += OnPickupInteractionBegin;
 		// Prevent proximity/trigger auto-pickup for Genesis Shards: only allow E-interaction.
 		On.RoR2.GenericPickupController.OnTriggerStay += OnPickupTriggerStay;
-		On.RoR2.PickupDropletController.Start += OnPickupDropletStart;
+		On.RoR2.GenericPickupController.Start += OnGenericPickupControllerStart;
 
 		Log.Warning("[LunarRitual] Hooks initialized");
 	}
@@ -240,45 +240,29 @@ namespace LunarRitual
 			Log.Warning($"[LunarRitual] Genesis Shard droplet created at {spawnPos}");
 		}
 
-		private static void OnPickupDropletStart(On.RoR2.PickupDropletController.orig_Start orig, PickupDropletController self)
+		private static void OnGenericPickupControllerStart(On.RoR2.GenericPickupController.orig_Start orig, GenericPickupController self)
 		{
 			orig(self);
 
 			try
 			{
 				if (self == null) return;
-				var gpc = self.GetComponent<GenericPickupController>();
-				if (gpc == null) return;
 
-				// Only affect our Genesis Shard droplets, never other pickups / lunar coins.
-				if (gpc.pickupIndex != GenesisShards.GenesisShardPickupIndex) return;
+				// Only attach to our Genesis Shards.
+				if (self.pickupIndex != GenesisShards.GenesisShardPickupIndex) return;
 
-				ConfigureDropletForManualPickup(self.gameObject);
+				if (!self.gameObject.GetComponent<GenesisShardDropletVisualFix>())
+				{
+					self.gameObject.AddComponent<GenesisShardDropletVisualFix>();
+				}
 			}
 			catch (Exception ex)
 			{
-				Log.Error($"[LunarRitual] Failed to configure Genesis Shard droplet: {ex.Message}");
+				Log.Error($"[LunarRitual] Failed to attach GenesisShard visual fix: {ex.Message}");
 			}
 		}
 
-		private static void ConfigureDropletForManualPickup(GameObject dropletObject)
-		{
-			if (!dropletObject) return;
-
-			// Disable trigger-based pickup so shards are collected only via interaction (E).
-			// We keep colliders enabled for raycasts/physics, but non-trigger.
-			Collider[] colliders = dropletObject.GetComponentsInChildren<Collider>(true);
-			if (colliders != null)
-			{
-				foreach (var c in colliders)
-				{
-					if (c) c.isTrigger = false;
-				}
-			}
-
-			// Ensure correct layer for interaction raycasts.
-			SetLayerRecursive(dropletObject, LayerIndex.pickups.intVal);
-		}
+		// Manual pickup behavior is enforced via GenericPickupController.OnTriggerStay hook.
 
 		private static void SetLayerRecursive(GameObject obj, int layer)
 		{
@@ -289,6 +273,129 @@ namespace LunarRitual
 			{
 				var child = t.GetChild(i);
 				if (child) SetLayerRecursive(child.gameObject, layer);
+			}
+		}
+
+		private class GenesisShardDropletVisualFix : MonoBehaviour
+		{
+			private static Material shardMat;
+			private static bool triedLoadMat;
+			private static GameObject meshTemplate;
+			private static bool triedLoadTemplate;
+
+			private Transform visualRoot;
+			private MeshRenderer shardMeshRenderer;
+
+			private void Awake()
+			{
+				EnsureMaterialLoaded();
+				EnsureMeshTemplateLoaded();
+				EnsureVisualChild();
+				HideVanillaPickupDisplay();
+			}
+
+			private void LateUpdate()
+			{
+				// Keep visuals stable: some builds toggle the vanilla PickupDisplay on landing.
+				HideVanillaPickupDisplay();
+				if (visualRoot == null || shardMeshRenderer == null) EnsureVisualChild();
+
+				if (shardMeshRenderer != null)
+				{
+					if (!shardMeshRenderer.enabled) shardMeshRenderer.enabled = true;
+					if (!shardMeshRenderer.gameObject.activeSelf) shardMeshRenderer.gameObject.SetActive(true);
+
+					if (shardMat != null)
+					{
+						shardMeshRenderer.sharedMaterial = shardMat;
+						Color genesisColor = new Color(1f, 0.4f, 0.4f, 1f);
+						shardMeshRenderer.sharedMaterial.SetColor("_Color", genesisColor);
+						shardMeshRenderer.sharedMaterial.SetColor("_EmColor", new Color(1f, 0.2f, 0.2f, 1f));
+					}
+				}
+			}
+
+			private static void EnsureMaterialLoaded()
+			{
+				if (triedLoadMat) return;
+				triedLoadMat = true;
+				try
+				{
+					shardMat = Addressables.LoadAssetAsync<Material>("RoR2/Base/Common/VFX/matLunarCoinPlaceholder.mat").WaitForCompletion();
+				}
+				catch
+				{
+					shardMat = null;
+				}
+			}
+
+			private static void EnsureMeshTemplateLoaded()
+			{
+				if (triedLoadTemplate) return;
+				triedLoadTemplate = true;
+				try
+				{
+					var pickup = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/LunarCoin/PickupLunarCoin.prefab").WaitForCompletion();
+					if (pickup != null)
+					{
+						var coinMesh = pickup.transform.Find("Coin5Mesh");
+						if (coinMesh != null)
+						{
+							meshTemplate = UnityEngine.Object.Instantiate(coinMesh.gameObject);
+							meshTemplate.name = "GenesisShardMeshTemplate";
+							meshTemplate.SetActive(false);
+							// Strip any colliders just in case.
+							foreach (var c in meshTemplate.GetComponentsInChildren<Collider>(true))
+							{
+								UnityEngine.Object.Destroy(c);
+							}
+							UnityEngine.Object.DontDestroyOnLoad(meshTemplate);
+						}
+					}
+				}
+				catch
+				{
+					meshTemplate = null;
+				}
+			}
+
+			private void EnsureVisualChild()
+			{
+				if (visualRoot != null) return;
+
+				// Reuse if already exists.
+				var existing = transform.Find("GenesisShardVisual");
+				if (existing != null)
+				{
+					visualRoot = existing;
+					return;
+				}
+
+				if (meshTemplate == null) return;
+
+				var root = new GameObject("GenesisShardVisual");
+				root.transform.SetParent(transform, false);
+				// Lift a bit so it doesn't clip into the ground.
+				root.transform.localPosition = new Vector3(0f, 0.22f, 0f);
+				root.transform.localRotation = Quaternion.identity;
+				root.transform.localScale = Vector3.one;
+
+				var meshObj = UnityEngine.Object.Instantiate(meshTemplate, root.transform);
+				meshObj.name = "Coin5Mesh";
+				meshObj.SetActive(true);
+
+				visualRoot = root.transform;
+				shardMeshRenderer = meshObj.GetComponent<MeshRenderer>();
+			}
+
+			private void HideVanillaPickupDisplay()
+			{
+				// Prevent the LunarCoin visual from showing while falling/landing.
+				Transform pickupDisplay = transform.Find("PickupDisplay");
+				if (pickupDisplay)
+				{
+					if (pickupDisplay.gameObject.activeSelf) pickupDisplay.gameObject.SetActive(false);
+				}
 			}
 		}
 
