@@ -1,5 +1,6 @@
 using BepInEx;
 using BepInEx.Configuration;
+using R2API;
 
 namespace LunarRitual
 {
@@ -37,6 +38,8 @@ namespace LunarRitual
 			shardChance.Value = 1.0f; //For debug only
 
 			Log.Init(Logger);
+
+			GenesisShards.InitializeGenesisShardPickup();
 
 			GenesisShards.LoadShards();
 

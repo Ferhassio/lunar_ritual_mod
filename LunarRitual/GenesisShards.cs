@@ -1,80 +1,138 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using BepInEx;
 using Newtonsoft.Json;
+using R2API;
+using R2API.Utils;
 using RoR2;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 using UnityEngine.Networking;
 
 namespace LunarRitual
 {
-	public class GenesisShards
+	public static class GenesisShards
 	{
-		public static Dictionary<ulong, int> PlayerShards = new Dictionary<ulong, int>();
+		private static readonly string ShardsSavePath = System.IO.Path.Combine(BepInEx.Paths.ConfigPath, "genesis_shards.json");
+		private static Dictionary<ulong, int> playerShards = new Dictionary<ulong, int>();
 
-		public static void AddShards(ulong steamId, int amount)
+		public static PickupIndex GenesisShardPickupIndex = PickupIndex.none;
+		public static MiscPickupDef GenesisShardPickupDef { get; private set; }
+
+		private static bool isInitialized = false;
+
+		public static void InitializeGenesisShardPickup()
 		{
-			Log.Warning($"[LunarRitual] AddShards called - steamId: {steamId}, amount: {amount}");
-			if (!PlayerShards.ContainsKey(steamId))
+			if (isInitialized)
 			{
-				PlayerShards[steamId] = 0;
-				Log.Warning($"[LunarRitual] Created new shard entry for player {steamId}");
+				Log.Warning("[LunarRitual] GenesisShard already initialized, skipping...");
+				return;
 			}
-			PlayerShards[steamId] += amount;
-			Log.Warning($"[LunarRitual] Added {amount} Genesis Shards to player {steamId}. Total: {PlayerShards[steamId]}");
-		}
 
-		public static void RemoveShards(ulong steamId, int amount)
-		{
-			if (PlayerShards.ContainsKey(steamId))
+			try
 			{
-				PlayerShards[steamId] = Mathf.Max(0, PlayerShards[steamId] - amount);
-				Log.Info($"[LunarRitual] Removed {amount} Genesis Shards from player {steamId}. Total: {PlayerShards[steamId]}");
+				LanguageAPI.Add("GENESIS_SHARD_NAME", "Genesis Shard");
+				LanguageAPI.Add("GENESIS_SHARD_PICKUP", "Genesis Shard");
+				LanguageAPI.Add("GENESIS_SHARD_DESC", "A fragment of lunar energy. Collect shards to perform powerful rituals.");
+				LanguageAPI.Add("GENESIS_SHARD_LORE", "The Genesis Shards are remnants of the Moon's power, scattered across the worlds.");
+
+				GenesisShardPickupDef = ScriptableObject.CreateInstance<GenesisShardMiscPickupDef>();
+				GenesisShardPickupDef.name = "GenesisShard";
+				GenesisShardPickupDef.nameToken = "GENESIS_SHARD_NAME";
+				GenesisShardPickupDef.descriptionToken = "GENESIS_SHARD_DESC";
+				ContentAddition.AddMiscPickupDef(GenesisShardPickupDef);
+
+				On.RoR2.PickupCatalog.Init += (orig) =>
+				{
+					var result = orig();
+					InitializePickupIndex();
+					return result;
+				};
+
+				Log.Info("[LunarRitual] GenesisShard MiscPickupDef registered via ContentAddition");
 			}
-		}
-
-		public static int GetShards(ulong steamId)
-		{
-			return PlayerShards.ContainsKey(steamId) ? PlayerShards[steamId] : 0;
-		}
-
-		public static void SetShards(ulong steamId, int amount)
-		{
-			PlayerShards[steamId] = amount;
-			Log.Info($"[LunarRitual] Set Genesis Shards for player {steamId} to {amount}");
-		}
-
-		public static void SaveShards()
-		{
-			Dictionary<string, int> saveData = new Dictionary<string, int>();
-			foreach (var kvp in PlayerShards)
+			catch (Exception ex)
 			{
-				saveData[kvp.Key.ToString()] = kvp.Value;
+				Log.Error($"[LunarRitual] Failed to initialize GenesisShard MiscPickupDef: {ex.Message}");
+				Log.Error($"[LunarRitual] Stack trace: {ex.StackTrace}");
+				return;
 			}
-			string jsonString = JsonConvert.SerializeObject(saveData);
-			System.IO.File.WriteAllText(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "genesis_shards.json"), jsonString);
-			Log.Info($"[LunarRitual] Genesis Shards saved to file");
+
+			isInitialized = true;
+			Log.Info("[LunarRitual] GenesisShard initialized successfully");
+		}
+
+		public static void InitializePickupIndex()
+		{
+			if (GenesisShardPickupDef == null)
+			{
+				Log.Error("[LunarRitual] Cannot initialize PickupIndex - GenesisShardPickupDef is null");
+				return;
+			}
+
+			try
+			{
+				MiscPickupIndex miscPickupIndex = GenesisShardPickupDef.miscPickupIndex;
+				GenesisShardPickupIndex = PickupCatalog.FindPickupIndex(miscPickupIndex);
+				if (GenesisShardPickupIndex != PickupIndex.none)
+				{
+					Log.Info($"[LunarRitual] GenesisShard PickupIndex found: {GenesisShardPickupIndex}");
+				}
+				else
+				{
+					Log.Error("[LunarRitual] Failed to find PickupIndex for GenesisShard");
+				}
+			}
+			catch (Exception ex)
+			{
+				Log.Error($"[LunarRitual] Exception while getting PickupIndex: {ex.Message}");
+			}
+		}
+
+		public static void AddShards(ulong userId, int amount)
+		{
+			if (!playerShards.ContainsKey(userId))
+			{
+				playerShards[userId] = 0;
+			}
+			playerShards[userId] += amount;
+			Log.Info($"[LunarRitual] Added {amount} Genesis Shard(s) to user {userId}. Total: {playerShards[userId]}");
+		}
+
+		public static int GetShards(ulong userId)
+		{
+			return playerShards.ContainsKey(userId) ? playerShards[userId] : 0;
+		}
+
+		public static void SetShards(ulong userId, int amount)
+		{
+			playerShards[userId] = amount;
+			Log.Info($"[LunarRitual] Set Genesis Shards for user {userId} to {amount}");
+		}
+
+		public static void RemoveShards(ulong userId, int amount)
+		{
+			if (playerShards.ContainsKey(userId))
+			{
+				playerShards[userId] = Math.Max(0, playerShards[userId] - amount);
+				Log.Info($"[LunarRitual] Removed {amount} Genesis Shard(s) from user {userId}. Total: {playerShards[userId]}");
+			}
 		}
 
 		public static void LoadShards()
 		{
-			PlayerShards.Clear();
-			string filePath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "genesis_shards.json");
-			string jsonString = "{}";
-			if (System.IO.File.Exists(filePath))
+			if (!File.Exists(ShardsSavePath))
 			{
-				jsonString = System.IO.File.ReadAllText(filePath);
+				Log.Info("[LunarRitual] No existing Genesis Shards save file found. Starting with 0 shards.");
+				return;
 			}
+
 			try
 			{
-				Dictionary<string, int> saveData = JsonConvert.DeserializeObject<Dictionary<string, int>>(jsonString);
-				foreach (var kvp in saveData)
-				{
-					if (ulong.TryParse(kvp.Key, out ulong steamId))
-					{
-						PlayerShards[steamId] = kvp.Value;
-					}
-				}
-				Log.Info($"[LunarRitual] Genesis Shards loaded from file. {PlayerShards.Count} players found.");
+				string json = File.ReadAllText(ShardsSavePath);
+				playerShards = JsonConvert.DeserializeObject<Dictionary<ulong, int>>(json);
+				Log.Info($"[LunarRitual] Loaded Genesis Shards for {playerShards.Count} player(s)");
 			}
 			catch (Exception ex)
 			{
@@ -82,42 +140,32 @@ namespace LunarRitual
 			}
 		}
 
-		public static void ResetShards()
-		{
-			PlayerShards.Clear();
-			string filePath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "genesis_shards.json");
-			System.IO.File.WriteAllText(filePath, "{}");
-			Log.Info($"[LunarRitual] Genesis Shards reset");
-		}
-
-		public static string GetShardsForProperSave()
-		{
-			Dictionary<string, int> saveData = new Dictionary<string, int>();
-			foreach (var kvp in PlayerShards)
-			{
-				saveData[kvp.Key.ToString()] = kvp.Value;
-			}
-			return JsonConvert.SerializeObject(saveData);
-		}
-
-		public static void LoadShardsFromProperSave(string jsonString)
+		public static void SaveShards()
 		{
 			try
 			{
-				PlayerShards.Clear();
-				Dictionary<string, int> saveData = JsonConvert.DeserializeObject<Dictionary<string, int>>(jsonString);
-				foreach (var kvp in saveData)
-				{
-					if (ulong.TryParse(kvp.Key, out ulong steamId))
-					{
-						PlayerShards[steamId] = kvp.Value;
-					}
-				}
-				Log.Info($"[LunarRitual] Genesis Shards loaded from ProperSave. {PlayerShards.Count} players found.");
+				string json = JsonConvert.SerializeObject(playerShards, Formatting.Indented);
+				File.WriteAllText(ShardsSavePath, json);
+				Log.Info("[LunarRitual] Genesis Shards saved successfully");
 			}
 			catch (Exception ex)
 			{
-				Log.Error($"[LunarRitual] Failed to load Genesis Shards from ProperSave: {ex.Message}");
+				Log.Error($"[LunarRitual] Failed to save Genesis Shards: {ex.Message}");
+			}
+		}
+	}
+
+	public class GenesisShardMiscPickupDef : MiscPickupDef
+	{
+		public override void GrantPickup(ref PickupDef.GrantContext context)
+		{
+			NetworkUser user = context.body?.master?.playerCharacterMasterController?.networkUser;
+			if (user != null)
+			{
+				ulong userId = user.id.value;
+				GenesisShards.AddShards(userId, 1);
+				Log.Warning($"[LunarRitual] Genesis Shard collected by player {userId} via GrantPickup");
+				GenesisShardsUI.RefreshUI();
 			}
 		}
 	}

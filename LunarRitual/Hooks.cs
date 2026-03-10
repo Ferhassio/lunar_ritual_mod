@@ -14,26 +14,21 @@ namespace LunarRitual
 	public class Hooks
 	{
 		private static GameObject shardEffectPrefab;
-		private static Dictionary<ulong, float> playerShardChance = new Dictionary<ulong, float>();
+	private static Dictionary<ulong, float> playerShardChance = new Dictionary<ulong, float>();
 
-		public static void Init()
-		{
-			On.RoR2.Run.Awake += CreateShardEffectPrefab;
-			On.RoR2.Run.Start += InitializePlayers;
-			On.RoR2.PlayerCharacterMasterController.Awake += OnPlayerAwake;
-			On.RoR2.GlobalEventManager.OnCharacterDeath += OnCharacterDeath;
-			On.RoR2.Run.OnDestroy += SaveShardsOnRunEnd;
-			On.RoR2.NetworkUser.RpcAwardLunarCoins += OnLunarCoinPickedUp;
+	public static void Init()
+	{
+		On.RoR2.Run.Awake += CreateShardEffectPrefab;
+		On.RoR2.Run.Start += InitializePlayers;
+		On.RoR2.PlayerCharacterMasterController.Awake += OnPlayerAwake;
+		On.RoR2.GlobalEventManager.OnCharacterDeath += OnCharacterDeath;
+		On.RoR2.Run.OnDestroy += SaveShardsOnRunEnd;
+		On.RoR2.GenericPickupController.OnInteractionBegin += OnPickupInteractionBegin;
 
-			if (ProperSaveCompatibility.enabled)
-			{
-				ProperSaveCompatibility.AddEvent(SaveShardsProperSave);
-			}
+		Log.Info("[LunarRitual] Hooks initialized");
+	}
 
-			Log.Info("[LunarRitual] Hooks initialized");
-		}
-
-		private static void CreateShardEffectPrefab(On.RoR2.Run.orig_Awake orig, Run self)
+	private static void CreateShardEffectPrefab(On.RoR2.Run.orig_Awake orig, Run self)
 		{
 			orig(self);
 
@@ -46,19 +41,10 @@ namespace LunarRitual
 				shardEffectPrefab.SetActive(false);
 			}
 
-			PickupDef coinDef = PickupCatalog.FindPickupIndex("LunarCoin.Coin0").pickupDef;
-			if (coinDef != null)
-			{
-				coinDef.nameToken = "Genesis Shard";
-				coinDef.interactContextToken = "Pick up Genesis Shard";
-				coinDef.baseColor = new Color32(36, 9, 53, 255);
-				coinDef.darkColor = new Color32(36, 9, 53, 255);
-			}
-
 			Log.Info("[LunarRitual] Shard effect prefab created");
 		}
 
-		private static void InitializePlayers(On.RoR2.Run.orig_Start orig, Run self)
+	private static void InitializePlayers(On.RoR2.Run.orig_Start orig, Run self)
 		{
 			if (!NetworkServer.active)
 			{
@@ -66,26 +52,15 @@ namespace LunarRitual
 				return;
 			}
 
-			bool isLoading = false;
-			if (ProperSaveCompatibility.enabled)
+			if (LunarRitual.resetShards.Value)
 			{
-				if (ProperSaveCompatibility.IsLoading) isLoading = true;
-			}
-
-			if (!isLoading && LunarRitual.resetShards.Value)
-			{
-				foreach (var user in NetworkUser.readOnlyInstancesList)
+				if (NetworkUser.readOnlyInstancesList != null)
 				{
-					ulong steamId = user.id.value;
-					GenesisShards.SetShards(steamId, LunarRitual.startingShards.Value);
-				}
-			}
-			else if (isLoading)
-			{
-				string jsonString = ProperSaveCompatibility.GetModdedData("GenesisShardsObj");
-				if (!string.IsNullOrEmpty(jsonString))
-				{
-					GenesisShards.LoadShardsFromProperSave(jsonString);
+					foreach (var user in NetworkUser.readOnlyInstancesList)
+					{
+						ulong steamId = user.id.value;
+						GenesisShards.SetShards(steamId, LunarRitual.startingShards.Value);
+					}
 				}
 			}
 
@@ -208,41 +183,55 @@ namespace LunarRitual
 		}
 
 		private static void SpawnShardDroplet(DamageReport damageReport)
+	{
+		PickupIndex pickupIndex = GenesisShards.GenesisShardPickupIndex;
+
+		if (pickupIndex == PickupIndex.none && GenesisShards.GenesisShardPickupDef != null)
 		{
-			Vector3 spawnPos = damageReport.victimBody.corePosition;
-			Vector3 dropPosition = spawnPos + Vector3.up * 2f;
-
-			PickupIndex shardIndex = PickupCatalog.FindPickupIndex("LunarCoin.Coin0");
-
-			PickupDropletController.CreatePickupDroplet(shardIndex, dropPosition, Vector3.zero);
-
-			Log.Warning($"[LunarRitual] Shard droplet created at {dropPosition}");
-		}
-
-		private static void OnLunarCoinPickedUp(On.RoR2.NetworkUser.orig_RpcAwardLunarCoins orig, RoR2.NetworkUser self, uint count)
-		{
-			orig(self, count);
-
-			if (NetworkServer.active && count > 0)
+			try
 			{
-				ulong steamId = self.id.value;
-				GenesisShards.AddShards(steamId, (int)count);
-				Log.Warning($"[LunarRitual] Lunar coin picked up, added {count} Genesis Shards to player {steamId}");
-				GenesisShardsUI.RefreshUI();
+				MiscPickupIndex miscPickupIndex = GenesisShards.GenesisShardPickupDef.miscPickupIndex;
+				pickupIndex = PickupCatalog.FindPickupIndex(miscPickupIndex);
+				GenesisShards.GenesisShardPickupIndex = pickupIndex;
+				Log.Warning($"[LunarRitual] Dynamically initialized GenesisShardPickupIndex: {pickupIndex}");
+				if (pickupIndex == PickupIndex.none)
+				{
+					Log.Error("[LunarRitual] Failed to find PickupIndex for GenesisShard dynamically");
+					return;
+				}
+			}
+			catch (Exception ex)
+			{
+				Log.Error($"[LunarRitual] Exception while getting PickupIndex: {ex.Message}");
+				return;
 			}
 		}
+
+		if (pickupIndex == PickupIndex.none)
+		{
+			Log.Error("[LunarRitual] GenesisShardPickupIndex is not initialized and GenesisShardPickupDef is null!");
+			return;
+		}
+
+		Vector3 spawnPos = damageReport.victimBody.corePosition;
+		Vector3 dropPosition = spawnPos + Vector3.up * 2f;
+		Vector3 velocity = Vector3.up * 10f;
+
+		PickupDropletController.CreatePickupDroplet(pickupIndex, dropPosition, velocity);
+
+		Log.Warning($"[LunarRitual] Genesis Shard droplet created at {dropPosition}");
+	}
+
+		private static void OnPickupInteractionBegin(On.RoR2.GenericPickupController.orig_OnInteractionBegin orig, GenericPickupController self, Interactor activator)
+	{
+		orig(self, activator);
+	}
 
 		private static void SaveShardsOnRunEnd(On.RoR2.Run.orig_OnDestroy orig, Run self)
 		{
 			GenesisShards.SaveShards();
 			playerShardChance.Clear();
 			orig(self);
-		}
-
-		private static void SaveShardsProperSave(Dictionary<string, object> dict)
-		{
-			string jsonString = GenesisShards.GetShardsForProperSave();
-			dict.Add("GenesisShardsObj", jsonString);
 		}
 	}
 
@@ -317,5 +306,9 @@ namespace LunarRitual
 				light.intensity = Mathf.Lerp(2f, 0f, Time.deltaTime / duration);
 			}
 		}
+	}
+
+	public class GenesisShardMarker : MonoBehaviour
+	{
 	}
 }
