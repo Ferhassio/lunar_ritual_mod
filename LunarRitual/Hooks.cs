@@ -25,7 +25,7 @@ namespace LunarRitual
 		On.RoR2.Run.OnDestroy += SaveShardsOnRunEnd;
 		On.RoR2.GenericPickupController.OnInteractionBegin += OnPickupInteractionBegin;
 
-		Log.Info("[LunarRitual] Hooks initialized");
+		Log.Warning("[LunarRitual] Hooks initialized");
 	}
 
 	private static void CreateShardEffectPrefab(On.RoR2.Run.orig_Awake orig, Run self)
@@ -41,7 +41,7 @@ namespace LunarRitual
 				shardEffectPrefab.SetActive(false);
 			}
 
-			Log.Info("[LunarRitual] Shard effect prefab created");
+			Log.Warning("[LunarRitual] Shard effect prefab created");
 		}
 
 	private static void InitializePlayers(On.RoR2.Run.orig_Start orig, Run self)
@@ -172,7 +172,7 @@ namespace LunarRitual
 					Log.Warning($"[LunarRitual] Droplet created");
 				}
 
-				Log.Info($"[LunarRitual] Genesis Shard dropped by {attackerMaster.GetBody()?.GetUserName() ?? "Unknown"}");
+				Log.Warning($"[LunarRitual] Genesis Shard dropped by {attackerMaster.GetBody()?.GetUserName() ?? "Unknown"}");
 
 				GenesisShardsUI.RefreshUI();
 			}
@@ -183,48 +183,86 @@ namespace LunarRitual
 		}
 
 		private static void SpawnShardDroplet(DamageReport damageReport)
-	{
-		PickupIndex pickupIndex = GenesisShards.GenesisShardPickupIndex;
-
-		if (pickupIndex == PickupIndex.none && GenesisShards.GenesisShardPickupDef != null)
 		{
-			try
+			PickupIndex pickupIndex = GenesisShards.GenesisShardPickupIndex;
+
+			if (pickupIndex == PickupIndex.none && GenesisShards.GenesisShardPickupDef != null)
 			{
-				MiscPickupIndex miscPickupIndex = GenesisShards.GenesisShardPickupDef.miscPickupIndex;
-				pickupIndex = PickupCatalog.FindPickupIndex(miscPickupIndex);
-				GenesisShards.GenesisShardPickupIndex = pickupIndex;
-				Log.Warning($"[LunarRitual] Dynamically initialized GenesisShardPickupIndex: {pickupIndex}");
-				if (pickupIndex == PickupIndex.none)
+				try
 				{
-					Log.Error("[LunarRitual] Failed to find PickupIndex for GenesisShard dynamically");
+					MiscPickupIndex miscPickupIndex = GenesisShards.GenesisShardPickupDef.miscPickupIndex;
+					pickupIndex = PickupCatalog.FindPickupIndex(miscPickupIndex);
+					GenesisShards.GenesisShardPickupIndex = pickupIndex;
+					Log.Warning($"[LunarRitual] Dynamically initialized GenesisShardPickupIndex: {pickupIndex}");
+					if (pickupIndex == PickupIndex.none)
+					{
+						Log.Error("[LunarRitual] Failed to find PickupIndex for GenesisShard dynamically");
+						return;
+					}
+				}
+				catch (Exception ex)
+				{
+					Log.Error($"[LunarRitual] Exception while getting PickupIndex: {ex.Message}");
 					return;
 				}
 			}
-			catch (Exception ex)
+
+			if (pickupIndex == PickupIndex.none)
 			{
-				Log.Error($"[LunarRitual] Exception while getting PickupIndex: {ex.Message}");
+				Log.Error("[LunarRitual] GenesisShardPickupIndex is not initialized and GenesisShardPickupDef is null!");
 				return;
+			}
+
+			if (GenesisShards.genesisShardPrefab == null)
+			{
+				Log.Warning("[LunarRitual] genesisShardPrefab is null, calling UpdateGenesisShardPrefab");
+				GenesisShards.UpdateGenesisShardPrefab();
+				if (GenesisShards.genesisShardPrefab == null)
+				{
+					Log.Error("[LunarRitual] genesisShardPrefab is still null after UpdateGenesisShardPrefab!");
+					return;
+				}
+			}
+
+			Vector3 spawnPos = damageReport.victimBody.corePosition + Vector3.up * 3f;
+			
+			GameObject pickupGameObject = GameObject.Instantiate(GenesisShards.genesisShardPrefab, spawnPos, Quaternion.identity);
+			GenericPickupController pickupController = pickupGameObject.GetComponent<GenericPickupController>();
+			if (pickupController != null)
+			{
+				pickupController.pickupIndex = pickupIndex;
+				pickupGameObject.transform.position = spawnPos;
+				NetworkServer.Spawn(pickupGameObject);
+				Log.Warning($"[LunarRitual] Genesis Shard pickup created directly at {spawnPos}");
+			}
+			else
+			{
+				Log.Error("[LunarRitual] Failed to get GenericPickupController from Genesis Shard prefab!");
+				GameObject.Destroy(pickupGameObject);
 			}
 		}
 
-		if (pickupIndex == PickupIndex.none)
-		{
-			Log.Error("[LunarRitual] GenesisShardPickupIndex is not initialized and GenesisShardPickupDef is null!");
-			return;
-		}
-
-		Vector3 spawnPos = damageReport.victimBody.corePosition;
-		Vector3 dropPosition = spawnPos + Vector3.up * 2f;
-		Vector3 velocity = Vector3.up * 10f;
-
-		PickupDropletController.CreatePickupDroplet(pickupIndex, dropPosition, velocity);
-
-		Log.Warning($"[LunarRitual] Genesis Shard droplet created at {dropPosition}");
-	}
-
 		private static void OnPickupInteractionBegin(On.RoR2.GenericPickupController.orig_OnInteractionBegin orig, GenericPickupController self, Interactor activator)
 	{
+		Log.Warning($"[LunarRitual] OnPickupInteractionBegin called - pickupIndex: {self.pickupIndex.value}, GenesisShardPickupIndex: {GenesisShards.GenesisShardPickupIndex.value}");
+		Log.Warning($"[LunarRitual] Is Genesis Shard: {self.pickupIndex == GenesisShards.GenesisShardPickupIndex}");
+		Log.Warning($"[LunarRitual] NetworkServer.active: {NetworkServer.active}, self.gameObject: {(self.gameObject != null ? "exists" : "null")}");
+		
 		orig(self, activator);
+		
+		if (self.pickupIndex == GenesisShards.GenesisShardPickupIndex)
+		{
+			Log.Warning("[LunarRitual] Genesis Shard interaction begin detected, destroying object");
+			if (NetworkServer.active && self.gameObject != null)
+			{
+				UnityEngine.Object.Destroy(self.gameObject);
+				Log.Warning("[LunarRitual] Genesis Shard object destroyed");
+			}
+			else
+			{
+				Log.Error($"[LunarRitual] Cannot destroy Genesis Shard - NetworkServer.active: {NetworkServer.active}, gameObject exists: {self.gameObject != null}");
+			}
+		}
 	}
 
 		private static void SaveShardsOnRunEnd(On.RoR2.Run.orig_OnDestroy orig, Run self)
