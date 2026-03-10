@@ -24,6 +24,9 @@ namespace LunarRitual
 		On.RoR2.GlobalEventManager.OnCharacterDeath += OnCharacterDeath;
 		On.RoR2.Run.OnDestroy += SaveShardsOnRunEnd;
 		On.RoR2.GenericPickupController.OnInteractionBegin += OnPickupInteractionBegin;
+		// Prevent proximity/trigger auto-pickup for Genesis Shards: only allow E-interaction.
+		On.RoR2.GenericPickupController.OnTriggerStay += OnPickupTriggerStay;
+		On.RoR2.PickupDropletController.Start += OnPickupDropletStart;
 
 		Log.Warning("[LunarRitual] Hooks initialized");
 	}
@@ -225,20 +228,67 @@ namespace LunarRitual
 			}
 
 			Vector3 spawnPos = damageReport.victimBody.corePosition + Vector3.up * 3f;
-			
-			GameObject pickupGameObject = GameObject.Instantiate(GenesisShards.genesisShardPrefab, spawnPos, Quaternion.identity);
-			GenericPickupController pickupController = pickupGameObject.GetComponent<GenericPickupController>();
-			if (pickupController != null)
+
+			Vector3 randomHorizontal = UnityEngine.Random.insideUnitSphere;
+			randomHorizontal.y = 0f;
+			if (randomHorizontal.sqrMagnitude > 0.0001f) randomHorizontal.Normalize();
+			Vector3 velocity = Vector3.up * 10f + randomHorizontal * UnityEngine.Random.Range(2f, 6f);
+
+			// Spawn a real pickup droplet (gives "Press E" prompt).
+			// We'll convert it to manual-pickup in OnPickupDropletStart (since this overload returns void).
+			PickupDropletController.CreatePickupDroplet(pickupIndex, spawnPos, velocity);
+			Log.Warning($"[LunarRitual] Genesis Shard droplet created at {spawnPos}");
+		}
+
+		private static void OnPickupDropletStart(On.RoR2.PickupDropletController.orig_Start orig, PickupDropletController self)
+		{
+			orig(self);
+
+			try
 			{
-				pickupController.pickupIndex = pickupIndex;
-				pickupGameObject.transform.position = spawnPos;
-				NetworkServer.Spawn(pickupGameObject);
-				Log.Warning($"[LunarRitual] Genesis Shard pickup created directly at {spawnPos}");
+				if (self == null) return;
+				var gpc = self.GetComponent<GenericPickupController>();
+				if (gpc == null) return;
+
+				// Only affect our Genesis Shard droplets, never other pickups / lunar coins.
+				if (gpc.pickupIndex != GenesisShards.GenesisShardPickupIndex) return;
+
+				ConfigureDropletForManualPickup(self.gameObject);
 			}
-			else
+			catch (Exception ex)
 			{
-				Log.Error("[LunarRitual] Failed to get GenericPickupController from Genesis Shard prefab!");
-				GameObject.Destroy(pickupGameObject);
+				Log.Error($"[LunarRitual] Failed to configure Genesis Shard droplet: {ex.Message}");
+			}
+		}
+
+		private static void ConfigureDropletForManualPickup(GameObject dropletObject)
+		{
+			if (!dropletObject) return;
+
+			// Disable trigger-based pickup so shards are collected only via interaction (E).
+			// We keep colliders enabled for raycasts/physics, but non-trigger.
+			Collider[] colliders = dropletObject.GetComponentsInChildren<Collider>(true);
+			if (colliders != null)
+			{
+				foreach (var c in colliders)
+				{
+					if (c) c.isTrigger = false;
+				}
+			}
+
+			// Ensure correct layer for interaction raycasts.
+			SetLayerRecursive(dropletObject, LayerIndex.pickups.intVal);
+		}
+
+		private static void SetLayerRecursive(GameObject obj, int layer)
+		{
+			if (!obj) return;
+			obj.layer = layer;
+			Transform t = obj.transform;
+			for (int i = 0; i < t.childCount; i++)
+			{
+				var child = t.GetChild(i);
+				if (child) SetLayerRecursive(child.gameObject, layer);
 			}
 		}
 
@@ -263,6 +313,17 @@ namespace LunarRitual
 				Log.Error($"[LunarRitual] Cannot destroy Genesis Shard - NetworkServer.active: {NetworkServer.active}, gameObject exists: {self.gameObject != null}");
 			}
 		}
+	}
+
+	private static void OnPickupTriggerStay(On.RoR2.GenericPickupController.orig_OnTriggerStay orig, GenericPickupController self, Collider other)
+	{
+		// If this is our shard pickup, block trigger-based pickup entirely.
+		if (self != null && self.pickupIndex == GenesisShards.GenesisShardPickupIndex)
+		{
+			return;
+		}
+
+		orig(self, other);
 	}
 
 		private static void SaveShardsOnRunEnd(On.RoR2.Run.orig_OnDestroy orig, Run self)

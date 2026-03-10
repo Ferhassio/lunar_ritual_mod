@@ -121,12 +121,13 @@ namespace LunarRitual
 				if (lunarCoinPrefab != null)
 				{
 					Log.Warning($"[LunarRitual] LunarCoin prefab loaded: {lunarCoinPrefab.name}");
-					
-					genesisShardPrefab = GameObject.Instantiate(lunarCoinPrefab);
-					genesisShardPrefab.name = "GenesisShardPickup";
-					Log.Warning($"[LunarRitual] GenesisShard prefab instantiated");
 
-					MeshRenderer meshRenderer = genesisShardPrefab.transform.Find("Coin5Mesh").GetComponent<MeshRenderer>();
+					// Build a display prefab by cloning the LunarCoin pickup prefab, then stripping pickup logic.
+					// This keeps all the visuals/VFX hierarchy RoR2 expects for droplet displays.
+					genesisShardPrefab = CreateGenesisShardDisplayPrefab(lunarCoinPrefab);
+					Log.Warning("[LunarRitual] GenesisShard display prefab created");
+
+					MeshRenderer meshRenderer = genesisShardPrefab.transform.Find("Coin5Mesh")?.GetComponent<MeshRenderer>();
 					if (meshRenderer != null)
 					{
 						Log.Warning("[LunarRitual] Coin5Mesh found, setting material");
@@ -146,7 +147,7 @@ namespace LunarRitual
 					}
 					else
 					{
-						Log.Error("[LunarRitual] Coin5Mesh not found in prefab");
+						Log.Error("[LunarRitual] Coin5Mesh not found in GenesisShard display prefab");
 					}
 
 					Light light = genesisShardPrefab.GetComponentInChildren<Light>();
@@ -160,29 +161,9 @@ namespace LunarRitual
 						Log.Warning("[LunarRitual] Light component not found");
 					}
 
-					GenericPickupController pickupController = genesisShardPrefab.GetComponent<GenericPickupController>();
-					if (pickupController == null)
-					{
-						pickupController = genesisShardPrefab.AddComponent<GenericPickupController>();
-						Log.Warning("[LunarRitual] Added GenericPickupController to prefab");
-					}
-					
-					if (pickupController != null)
-					{
-						pickupController.pickupIndex = GenesisShardPickupIndex;
-						Log.Warning($"[LunarRitual] GenericPickupController pickupIndex set to {GenesisShardPickupIndex.value}");
-						
-						Collider collider = genesisShardPrefab.GetComponentInChildren<Collider>();
-						if (collider != null)
-						{
-							collider.isTrigger = false;
-							Log.Warning("[LunarRitual] Collider trigger disabled - manual pickup only");
-						}
-					}
-					else
-					{
-						Log.Error("[LunarRitual] GenericPickupController not found on prefab!");
-					}
+					// Link our custom display prefab to THIS pickup only (does not affect Lunar Coins).
+					genesisShardDef.dropletDisplayPrefab = genesisShardPrefab;
+					Log.Warning("[LunarRitual] Assigned GenesisShard dropletDisplayPrefab");
 
 					Log.Warning("[LunarRitual] GenesisShard prefab created and assigned successfully");
 				}
@@ -195,6 +176,47 @@ namespace LunarRitual
 			{
 				Log.Error($"[LunarRitual] Exception while updating GenesisShard prefab: {ex.Message}");
 				Log.Error($"[LunarRitual] Stack trace: {ex.StackTrace}");
+			}
+		}
+
+		private static GameObject CreateGenesisShardDisplayPrefab(GameObject lunarCoinPickupPrefab)
+		{
+			if (!lunarCoinPickupPrefab) return null;
+
+			GameObject display = GameObject.Instantiate(lunarCoinPickupPrefab);
+			display.name = "GenesisShardDisplay";
+			display.SetActive(true);
+
+			// Strip interactive/physics components; droplet handles interaction separately.
+			var gpc = display.GetComponent<GenericPickupController>();
+			if (gpc) UnityEngine.Object.Destroy(gpc);
+			var rb = display.GetComponent<Rigidbody>();
+			if (rb) UnityEngine.Object.Destroy(rb);
+
+			// Remove colliders so display doesn't interfere with droplet's own colliders.
+			var colliders = display.GetComponentsInChildren<Collider>(true);
+			if (colliders != null)
+			{
+				foreach (var c in colliders)
+				{
+					if (c) UnityEngine.Object.Destroy(c);
+				}
+			}
+
+			// Ensure consistent layer.
+			SetLayerRecursive(display, LayerIndex.pickups.intVal);
+			return display;
+		}
+
+		private static void SetLayerRecursive(GameObject obj, int layer)
+		{
+			if (!obj) return;
+			obj.layer = layer;
+			Transform t = obj.transform;
+			for (int i = 0; i < t.childCount; i++)
+			{
+				var child = t.GetChild(i);
+				if (child) SetLayerRecursive(child.gameObject, layer);
 			}
 		}
 
