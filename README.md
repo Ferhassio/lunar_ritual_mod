@@ -72,16 +72,15 @@ Game Code: `LunarSun`
 
 ## Ritual of Blessing
 
-Grants a **random permanent stat bonus**.
+Grants a **permanent stat bonus**.
 
-Possible stats:
+Possible flat stats:
 
-- Base Damage
-- Movement Speed
-- HP Regen
-- Attack Speed
-- Max HP
-- Defence
+- Base Damage (+5/15/25)
+- Movement Speed (+1/2/3)
+- HP Regen (+5/15/25)
+- Max HP (+50/100/500)
+- Defence (+50/100/500)
 
 The **strength of the bonus scales with the offering size**.
 

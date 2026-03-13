@@ -46,6 +46,7 @@ namespace LunarRitual
 			NetworkingAPI.RegisterMessageType<RitualOfEssenceRequest>();
 			NetworkingAPI.RegisterMessageType<RitualOfEgoRequest>();
 			NetworkingAPI.RegisterMessageType<RitualOfLightnessRequest>();
+			NetworkingAPI.RegisterMessageType<RitualOfBlessingRequest>();
 			Log.Info("[LunarRitual] RitualMenu initialized + message registered");
 
 			EnsureBootstrap();
@@ -236,9 +237,10 @@ namespace LunarRitual
 			tabsRect.sizeDelta = new Vector2(800f, 56f);
 			tabsRect.anchoredPosition = new Vector2(0f, -140f);
 
-			CreateTabButton(ritualTabs.transform, "Essence", new Vector2(-240f, 0f), () => SelectRitual(RitualType.Essence));
-			CreateTabButton(ritualTabs.transform, "Ego", new Vector2(0f, 0f), () => SelectRitual(RitualType.Ego));
-			CreateTabButton(ritualTabs.transform, "Lightness", new Vector2(240f, 0f), () => SelectRitual(RitualType.Lightness));
+			CreateTabButton(ritualTabs.transform, "Essence", new Vector2(-320f, 0f), () => SelectRitual(RitualType.Essence));
+			CreateTabButton(ritualTabs.transform, "Ego", new Vector2(-106f, 0f), () => SelectRitual(RitualType.Ego));
+			CreateTabButton(ritualTabs.transform, "Lightness", new Vector2(106f, 0f), () => SelectRitual(RitualType.Lightness));
+			CreateTabButton(ritualTabs.transform, "Blessing", new Vector2(320f, 0f), () => SelectRitual(RitualType.Blessing));
 
 			var ritualTitleObj = new GameObject("RitualTitle");
 			ritualTitleObj.transform.SetParent(panel.transform, false);
@@ -427,6 +429,11 @@ namespace LunarRitual
 					ritualDescText.text = "Gain stacks of Hopoo Feathers.\n1: 1 • 5: 2–4 • 10: 5–10";
 					SetOfferingButtonsActive(true, true, true);
 					break;
+				case RitualType.Blessing:
+					ritualTitleText.text = "Ritual of Blessing";
+					ritualDescText.text = "Gain permanent flat stat bonuses.\n1: Small boost • 5: Medium boost • 10: Grand boost\n(Damage, Speed, HP Regen, Max HP, Defense)";
+					SetOfferingButtonsActive(true, true, true);
+					break;
 			}
 		}
 
@@ -449,6 +456,9 @@ namespace LunarRitual
 					break;
 				case RitualType.Lightness:
 					RequestLightness(tier);
+					break;
+				case RitualType.Blessing:
+					RequestBlessing(tier);
 					break;
 			}
 		}
@@ -553,6 +563,46 @@ namespace LunarRitual
 			Log.Info($"[LunarRitual] Ritual click: local steamId={user.id.value}, netId={user.netId}");
 
 			var msg = new RitualOfLightnessRequest
+			{
+				networkUserNetId = user.netId,
+				tier = tier
+			};
+
+			if (NetworkServer.active)
+			{
+				Log.Info("[LunarRitual] Handling ritual locally (host)");
+				msg.OnReceived();
+			}
+			else
+			{
+				Log.Info("[LunarRitual] Sending ritual request to server");
+				msg.Send(NetworkDestination.Server);
+			}
+
+			InvokeDelayed(0.15f, RefreshShardsText);
+			Close();
+		}
+
+		private static void RequestBlessing(OfferingTier tier)
+		{
+			Log.Info($"[LunarRitual] Ritual of Blessing clicked: {tier}. NetworkServer.active={NetworkServer.active}");
+			RefreshShardsText();
+
+			if (NetworkUser.readOnlyLocalPlayersList == null || NetworkUser.readOnlyLocalPlayersList.Count <= 0)
+			{
+				Log.Warning("[LunarRitual] Ritual click ignored: no local players");
+				return;
+			}
+			var user = NetworkUser.readOnlyLocalPlayersList[0];
+			if (user == null)
+			{
+				Log.Warning("[LunarRitual] Ritual click ignored: local user is null");
+				return;
+			}
+
+			Log.Info($"[LunarRitual] Ritual click: local steamId={user.id.value}, netId={user.netId}");
+
+			var msg = new RitualOfBlessingRequest
 			{
 				networkUserNetId = user.netId,
 				tier = tier
@@ -874,15 +924,15 @@ namespace LunarRitual
 
 				int min = tier switch
 				{
-					OfferingTier.Small => 1,
+					OfferingTier.Small =>1,
 					OfferingTier.Medium => 2,
 					OfferingTier.Grand => 5,
 					_ => 0
 				};
 				int maxInclusive = tier switch
 				{
-					OfferingTier.Small => 1,
-					OfferingTier.Medium => 4,
+					OfferingTier.Small =>1,
+					OfferingTier.Medium =>4,
 					OfferingTier.Grand => 10,
 					_ => 0
 				};
@@ -895,6 +945,128 @@ namespace LunarRitual
 				Log.Info($"[LunarRitual] Lightness: granting {stacks}x {featherItem} cost={cost} steamId={steamId}");
 				GenesisShards.RemoveShards(steamId, cost);
 				master.inventory.GiveItem(featherItem, stacks);
+				serverConsumedThisRun.Add(steamId);
+
+				GenesisShards.SaveShards();
+				GenesisShardsUI.RefreshUI();
+			}
+		}
+
+		private struct RitualOfBlessingRequest : INetMessage
+		{
+			public NetworkInstanceId networkUserNetId;
+			public OfferingTier tier;
+
+			public void Serialize(NetworkWriter writer)
+			{
+				writer.Write(networkUserNetId);
+				writer.Write((byte)tier);
+			}
+
+			public void Deserialize(NetworkReader reader)
+			{
+				networkUserNetId = reader.ReadNetworkId();
+				tier = (OfferingTier)reader.ReadByte();
+			}
+
+			public void OnReceived()
+			{
+				Log.Info($"[LunarRitual] RitualOfBlessingRequest.OnReceived. NetworkServer.active={NetworkServer.active}, netId={networkUserNetId.Value}, tier={tier}");
+				if (!NetworkServer.active) return;
+
+				GameObject userObj = NetworkServer.FindLocalObject(networkUserNetId);
+				if (!userObj) return;
+
+				NetworkUser user = userObj.GetComponent<NetworkUser>();
+				if (!user) return;
+
+				ulong steamId = user.id.value;
+				if (serverConsumedThisRun.Contains(steamId))
+				{
+					Log.Info($"[LunarRitual] Blessing: ritual already consumed this run. steamId={steamId}");
+					return;
+				}
+
+				int cost = tier switch
+				{
+					OfferingTier.Small => SmallCost,
+					OfferingTier.Medium => MediumCost,
+					OfferingTier.Grand => GrandCost,
+					_ => 0
+				};
+				if (cost <= 0) return;
+
+				int shards = GenesisShards.GetShards(steamId);
+				if (shards < cost)
+				{
+					Log.Info($"[LunarRitual] Blessing: not enough shards. steamId={steamId} shards={shards} cost={cost}");
+					return;
+				}
+
+				var master = user.master;
+				if (!master || master.inventory == null) return;
+
+				var body = master.GetBody();
+				if (!body) return;
+
+				// Define stat bonuses based on tier
+				// Small: +5 Damage, +1 Speed, +5 HP Regen, +50 Max HP, +50 Defense
+				// Medium: +15 Damage, +2 Speed, +15 HP Regen, +100 Max HP, +100 Defense
+				// Grand: +25 Damage, +3 Speed, +25 HP Regen, +500 Max HP, +500 Defense
+
+				float damageBonus = tier switch
+				{
+					OfferingTier.Small => 5f,
+					OfferingTier.Medium => 15f,
+					OfferingTier.Grand => 25f,
+					_ => 0f
+				};
+
+				float speedBonus = tier switch
+				{
+					OfferingTier.Small => 1f,
+					OfferingTier.Medium => 2f,
+					OfferingTier.Grand => 3f,
+					_ => 0f
+				};
+
+				float hpRegenBonus = tier switch
+				{
+					OfferingTier.Small => 5f,
+					OfferingTier.Medium => 15f,
+					OfferingTier.Grand => 25f,
+					_ => 0f
+				};
+
+				float maxHpBonus = tier switch
+				{
+					OfferingTier.Small => 50f,
+					OfferingTier.Medium => 100f,
+					OfferingTier.Grand => 500f,
+					_ => 0f
+				};
+
+				float defenseBonus = tier switch
+				{
+					OfferingTier.Small => 50f,
+					OfferingTier.Medium => 100f,
+					OfferingTier.Grand => 500f,
+					_ => 0f
+				};
+
+				// Apply stat bonuses directly to the character body
+				// These are flat, permanent bonuses that persist through the run
+				body.baseDamage += damageBonus;
+				body.baseMoveSpeed += speedBonus;
+				body.baseRegen += hpRegenBonus;
+				body.baseMaxHealth += maxHpBonus;
+				body.baseArmor += defenseBonus;
+
+				// Recalculate stats to ensure bonuses are applied
+				body.RecalculateStats();
+
+				Log.Info($"[LunarRitual] Blessing: applied bonuses - DMG+{damageBonus} SPD+{speedBonus} Regen+{hpRegenBonus} HP+{maxHpBonus} Def+{defenseBonus} cost={cost} steamId={steamId}");
+				GenesisShards.RemoveShards(steamId, cost);
 				serverConsumedThisRun.Add(steamId);
 
 				GenesisShards.SaveShards();
@@ -962,7 +1134,8 @@ namespace LunarRitual
 		{
 			Essence = 0,
 			Ego = 1,
-			Lightness = 2
+			Lightness = 2,
+			Blessing = 3
 		}
 	}
 }
