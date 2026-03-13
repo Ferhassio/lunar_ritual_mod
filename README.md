@@ -103,9 +103,13 @@ Game Code: `Feather`
 
 ## Ritual of Heresy
 
-Cost: **10 coins only**
-
 Grants the full **Heresy set**, allowing transformation into the hidden character **Heretic**.
+
+| Offering | Reward |
+|---|---|
+| 1 coin | 1 stack |
+| 5 coins | 2–3 stacks |
+| 10 coins | 4–5 stacks |
 
 Items received:
 

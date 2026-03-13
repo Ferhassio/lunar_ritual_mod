@@ -47,6 +47,7 @@ namespace LunarRitual
 			NetworkingAPI.RegisterMessageType<RitualOfEgoRequest>();
 			NetworkingAPI.RegisterMessageType<RitualOfLightnessRequest>();
 			NetworkingAPI.RegisterMessageType<RitualOfBlessingRequest>();
+			NetworkingAPI.RegisterMessageType<RitualOfHeresyRequest>();
 			Log.Info("[LunarRitual] RitualMenu initialized + message registered");
 
 			EnsureBootstrap();
@@ -237,10 +238,11 @@ namespace LunarRitual
 			tabsRect.sizeDelta = new Vector2(800f, 56f);
 			tabsRect.anchoredPosition = new Vector2(0f, -140f);
 
-			CreateTabButton(ritualTabs.transform, "Essence", new Vector2(-320f, 0f), () => SelectRitual(RitualType.Essence));
-			CreateTabButton(ritualTabs.transform, "Ego", new Vector2(-106f, 0f), () => SelectRitual(RitualType.Ego));
-			CreateTabButton(ritualTabs.transform, "Lightness", new Vector2(106f, 0f), () => SelectRitual(RitualType.Lightness));
-			CreateTabButton(ritualTabs.transform, "Blessing", new Vector2(320f, 0f), () => SelectRitual(RitualType.Blessing));
+			CreateTabButton(ritualTabs.transform, "Essence", new Vector2(-360f, 0f), () => SelectRitual(RitualType.Essence));
+			CreateTabButton(ritualTabs.transform, "Ego", new Vector2(-180f, 0f), () => SelectRitual(RitualType.Ego));
+			CreateTabButton(ritualTabs.transform, "Lightness", new Vector2(0f, 0f), () => SelectRitual(RitualType.Lightness));
+			CreateTabButton(ritualTabs.transform, "Blessing", new Vector2(180f, 0f), () => SelectRitual(RitualType.Blessing));
+			CreateTabButton(ritualTabs.transform, "Heresy", new Vector2(360f, 0f), () => SelectRitual(RitualType.Heresy));
 
 			var ritualTitleObj = new GameObject("RitualTitle");
 			ritualTitleObj.transform.SetParent(panel.transform, false);
@@ -434,6 +436,11 @@ namespace LunarRitual
 					ritualDescText.text = "Gain permanent flat stat bonuses.\n1: Small boost • 5: Medium boost • 10: Grand boost\n(Damage, Speed, HP Regen, Max HP, Defense)";
 					SetOfferingButtonsActive(true, true, true);
 					break;
+				case RitualType.Heresy:
+					ritualTitleText.text = "Ritual of Heresy";
+					ritualDescText.text = "Gain Heresy items for Heretic transformation.\n1: 1 stack • 5: 2–3 stacks • 10: 4–5 stacks\n(All 4 Heresy items)";
+					SetOfferingButtonsActive(true, true, true);
+					break;
 			}
 		}
 
@@ -460,7 +467,50 @@ namespace LunarRitual
 				case RitualType.Blessing:
 					RequestBlessing(tier);
 					break;
+				case RitualType.Heresy:
+					RequestHeresy(tier);
+					break;
 			}
+		}
+
+		private static void RequestHeresy(OfferingTier tier)
+		{
+			Log.Info($"[LunarRitual] Ritual of Heresy clicked: {tier}. NetworkServer.active={NetworkServer.active}");
+			RefreshShardsText();
+
+			if (NetworkUser.readOnlyLocalPlayersList == null || NetworkUser.readOnlyLocalPlayersList.Count <= 0)
+			{
+				Log.Warning("[LunarRitual] Ritual click ignored: no local players");
+				return;
+			}
+			var user = NetworkUser.readOnlyLocalPlayersList[0];
+			if (user == null)
+			{
+				Log.Warning("[LunarRitual] Ritual click ignored: local user is null");
+				return;
+			}
+
+			Log.Info($"[LunarRitual] Ritual click: local steamId={user.id.value}, netId={user.netId}");
+
+			var msg = new RitualOfHeresyRequest
+			{
+				networkUserNetId = user.netId,
+				tier = tier
+			};
+
+			if (NetworkServer.active)
+			{
+				Log.Info("[LunarRitual] Handling ritual locally (host)");
+				msg.OnReceived();
+			}
+			else
+			{
+				Log.Info("[LunarRitual] Sending ritual request to server");
+				msg.Send(NetworkDestination.Server);
+			}
+
+			InvokeDelayed(0.15f, RefreshShardsText);
+			Close();
 		}
 
 		private static void RequestEssence(OfferingTier tier)
@@ -1074,6 +1124,113 @@ namespace LunarRitual
 			}
 		}
 
+		private struct RitualOfHeresyRequest : INetMessage
+		{
+			public NetworkInstanceId networkUserNetId;
+			public OfferingTier tier;
+
+			public void Serialize(NetworkWriter writer)
+			{
+				writer.Write(networkUserNetId);
+				writer.Write((byte)tier);
+			}
+
+			public void Deserialize(NetworkReader reader)
+			{
+				networkUserNetId = reader.ReadNetworkId();
+				tier = (OfferingTier)reader.ReadByte();
+			}
+
+			public void OnReceived()
+			{
+				Log.Info($"[LunarRitual] RitualOfHeresyRequest.OnReceived. NetworkServer.active={NetworkServer.active}, netId={networkUserNetId.Value}, tier={tier}");
+				if (!NetworkServer.active) return;
+
+				GameObject userObj = NetworkServer.FindLocalObject(networkUserNetId);
+				if (!userObj) return;
+
+				NetworkUser user = userObj.GetComponent<NetworkUser>();
+				if (!user) return;
+
+				ulong steamId = user.id.value;
+				if (serverConsumedThisRun.Contains(steamId))
+				{
+					Log.Info($"[LunarRitual] Heresy: ritual already consumed this run. steamId={steamId}");
+					return;
+				}
+
+				int cost = tier switch
+				{
+					OfferingTier.Small => SmallCost,
+					OfferingTier.Medium => MediumCost,
+					OfferingTier.Grand => GrandCost,
+					_ => 0
+				};
+				if (cost <= 0) return;
+
+				int shards = GenesisShards.GetShards(steamId);
+				if (shards < cost)
+				{
+					Log.Info($"[LunarRitual] Heresy: not enough shards. steamId={steamId} shards={shards} cost={cost}");
+					return;
+				}
+
+				var master = user.master;
+				if (!master || master.inventory == null) return;
+
+				// Define Heresy item stacks based on tier
+				// Small: 1 stack
+				// Medium: 2-3 stacks
+				// Grand: 4-5 stacks
+
+				int min = tier switch
+				{
+					OfferingTier.Small => 1,
+					OfferingTier.Medium => 2,
+					OfferingTier.Grand => 4,
+					_ => 0
+				};
+				int maxInclusive = tier switch
+				{
+					OfferingTier.Small => 1,
+					OfferingTier.Medium => 3,
+					OfferingTier.Grand => 5,
+					_ => 0
+				};
+				if (min <= 0 || maxInclusive < min) return;
+
+				int stacks = Run.instance != null
+					? Run.instance.treasureRng.RangeInt(min, maxInclusive + 1)
+					: UnityEngine.Random.Range(min, maxInclusive + 1);
+
+				// Get all 4 Heresy items
+				ItemIndex visions = ItemCatalog.FindItemIndex("LunarPrimaryReplacement");
+				ItemIndex hooks = ItemCatalog.FindItemIndex("LunarSecondaryReplacement");
+				ItemIndex strides = ItemCatalog.FindItemIndex("LunarUtilityReplacement");
+				ItemIndex essence = ItemCatalog.FindItemIndex("LunarSpecialReplacement");
+
+				if (visions == ItemIndex.None || hooks == ItemIndex.None || 
+				    strides == ItemIndex.None || essence == ItemIndex.None)
+				{
+					Log.Warning("[LunarRitual] Heresy: one or more Heresy items not found in ItemCatalog");
+					return;
+				}
+
+				// Grant all 4 Heresy items with the same stack count
+				master.inventory.GiveItem(visions, stacks);
+				master.inventory.GiveItem(hooks, stacks);
+				master.inventory.GiveItem(strides, stacks);
+				master.inventory.GiveItem(essence, stacks);
+
+				Log.Info($"[LunarRitual] Heresy: granted {stacks}x of all 4 Heresy items cost={cost} steamId={steamId}");
+				GenesisShards.RemoveShards(steamId, cost);
+				serverConsumedThisRun.Add(steamId);
+
+				GenesisShards.SaveShards();
+				GenesisShardsUI.RefreshUI();
+			}
+		}
+
 		private static ItemIndex RitualOfEssenceServerRollItem(OfferingTier tier)
 		{
 			if (Run.instance == null) return ItemIndex.None;
@@ -1135,7 +1292,8 @@ namespace LunarRitual
 			Essence = 0,
 			Ego = 1,
 			Lightness = 2,
-			Blessing = 3
+			Blessing = 3,
+			Heresy = 4
 		}
 	}
 }
