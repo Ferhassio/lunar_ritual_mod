@@ -50,6 +50,7 @@ namespace LunarRitual
 			NetworkingAPI.RegisterMessageType<RitualOfHeresyRequest>();
 			NetworkingAPI.RegisterMessageType<RitualOfSubjugationRequest>();
 			NetworkingAPI.RegisterMessageType<RitualOfGreedRequest>();
+			NetworkingAPI.RegisterMessageType<RitualOfHuntRequest>();
 			Log.Info("[LunarRitual] RitualMenu initialized + message registered");
 
 			EnsureBootstrap();
@@ -257,12 +258,13 @@ namespace LunarRitual
 			row2Rect.sizeDelta = new Vector2(800f, 56f);
 			row2Rect.anchoredPosition = new Vector2(0f, -196f);
 
-			// Second row: 3 buttons
-			// Button width: 180f, Spacing: 65f between edges
-			// Centers: -245, 0, 245
-			CreateTabButton(ritualTabsRow2.transform, "Heresy", new Vector2(-245f, 0f), () => SelectRitual(RitualType.Heresy));
-			CreateTabButton(ritualTabsRow2.transform, "Subjugation", new Vector2(0f, 0f), () => SelectRitual(RitualType.Subjugation));
-			CreateTabButton(ritualTabsRow2.transform, "Greed", new Vector2(245f, 0f), () => SelectRitual(RitualType.Greed));
+			// Second row: 4 buttons
+			// Button width: 180f, Spacing: 26.67f between buttons
+			// Centers: -268.34, -61.67, 141.67, 348.34
+			CreateTabButton(ritualTabsRow2.transform, "Heresy", new Vector2(-268.34f, 0f), () => SelectRitual(RitualType.Heresy));
+			CreateTabButton(ritualTabsRow2.transform, "Subjugation", new Vector2(-61.67f, 0f), () => SelectRitual(RitualType.Subjugation));
+			CreateTabButton(ritualTabsRow2.transform, "Greed", new Vector2(141.67f, 0f), () => SelectRitual(RitualType.Greed));
+			CreateTabButton(ritualTabsRow2.transform, "Hunt", new Vector2(348.34f, 0f), () => SelectRitual(RitualType.Hunt));
 
 			var ritualTitleObj = new GameObject("RitualTitle");
 			ritualTitleObj.transform.SetParent(panel.transform, false);
@@ -471,6 +473,11 @@ namespace LunarRitual
 					ritualDescText.text = "Receive gold at start of run.\n1: 100–200 gold • 5: 500–1000 gold • 10: 1000–5000 gold";
 					SetOfferingButtonsActive(true, true, true);
 					break;
+				case RitualType.Hunt:
+					ritualTitleText.text = "Ritual of Hunt";
+					ritualDescText.text = "Gain Wake of Vultures.\n1: 1 stack • 5: 3 stacks • 10: 5 stacks\n(Kill enemies to summon allies)";
+					SetOfferingButtonsActive(true, true, true);
+					break;
 			}
 		}
 
@@ -506,6 +513,9 @@ namespace LunarRitual
 				case RitualType.Greed:
 					RequestGreed(tier);
 					break;
+				case RitualType.Hunt:
+					RequestHunt(tier);
+					break;
 			}
 		}
 
@@ -529,6 +539,46 @@ namespace LunarRitual
 			Log.Info($"[LunarRitual] Ritual click: local steamId={user.id.value}, netId={user.netId}");
 
 			var msg = new RitualOfGreedRequest
+			{
+				networkUserNetId = user.netId,
+				tier = tier
+			};
+
+			if (NetworkServer.active)
+			{
+				Log.Info("[LunarRitual] Handling ritual locally (host)");
+				msg.OnReceived();
+			}
+			else
+			{
+				Log.Info("[LunarRitual] Sending ritual request to server");
+				msg.Send(NetworkDestination.Server);
+			}
+
+			InvokeDelayed(0.15f, RefreshShardsText);
+			Close();
+		}
+
+		private static void RequestHunt(OfferingTier tier)
+		{
+			Log.Info($"[LunarRitual] Ritual of Hunt clicked: {tier}. NetworkServer.active={NetworkServer.active}");
+			RefreshShardsText();
+
+			if (NetworkUser.readOnlyLocalPlayersList == null || NetworkUser.readOnlyLocalPlayersList.Count <= 0)
+			{
+				Log.Warning("[LunarRitual] Ritual click ignored: no local players");
+				return;
+			}
+			var user = NetworkUser.readOnlyLocalPlayersList[0];
+			if (user == null)
+			{
+				Log.Warning("[LunarRitual] Ritual click ignored: local user is null");
+				return;
+			}
+
+			Log.Info($"[LunarRitual] Ritual click: local steamId={user.id.value}, netId={user.netId}");
+
+			var msg = new RitualOfHuntRequest
 			{
 				networkUserNetId = user.netId,
 				tier = tier
@@ -1585,6 +1635,94 @@ namespace LunarRitual
 			}
 		}
 
+		private struct RitualOfHuntRequest : INetMessage
+		{
+			public NetworkInstanceId networkUserNetId;
+			public OfferingTier tier;
+
+			public void Serialize(NetworkWriter writer)
+			{
+				writer.Write(networkUserNetId);
+				writer.Write((byte)tier);
+			}
+
+			public void Deserialize(NetworkReader reader)
+			{
+				networkUserNetId = reader.ReadNetworkId();
+				tier = (OfferingTier)reader.ReadByte();
+			}
+
+			public void OnReceived()
+			{
+				Log.Info($"[LunarRitual] RitualOfHuntRequest.OnReceived. NetworkServer.active={NetworkServer.active}, netId={networkUserNetId.Value}, tier={tier}");
+				if (!NetworkServer.active) return;
+
+				GameObject userObj = NetworkServer.FindLocalObject(networkUserNetId);
+				if (!userObj) return;
+
+				NetworkUser user = userObj.GetComponent<NetworkUser>();
+				if (!user) return;
+
+				ulong steamId = user.id.value;
+				if (serverConsumedThisRun.Contains(steamId))
+				{
+					Log.Info($"[LunarRitual] Hunt: ritual already consumed this run. steamId={steamId}");
+					return;
+				}
+
+				int cost = tier switch
+				{
+					OfferingTier.Small => SmallCost,
+					OfferingTier.Medium => MediumCost,
+					OfferingTier.Grand => GrandCost,
+					_ => 0
+				};
+				if (cost <= 0) return;
+
+				int shards = GenesisShards.GetShards(steamId);
+				if (shards < cost)
+				{
+					Log.Info($"[LunarRitual] Hunt: not enough shards. steamId={steamId} shards={shards} cost={cost}");
+					return;
+				}
+
+				var master = user.master;
+				if (!master || master.inventory == null) return;
+
+				// Define Hunt item stacks based on tier
+				// Small: 1 stack
+				// Medium: 3 stacks
+				// Grand: 5 stacks
+
+				int stacks = tier switch
+				{
+					OfferingTier.Small => 1,
+					OfferingTier.Medium => 3,
+					OfferingTier.Grand => 5,
+					_ => 0
+				};
+				if (stacks <= 0) return;
+
+				// Get Wake of Vultures item (HeadHunter)
+				ItemIndex wakeOfVultures = ItemCatalog.FindItemIndex("HeadHunter");
+				if (wakeOfVultures == ItemIndex.None)
+				{
+					Log.Warning("[LunarRitual] Hunt: Wake of Vultures item not found in ItemCatalog");
+					return;
+				}
+
+				// Grant Wake of Vultures
+				master.inventory.GiveItem(wakeOfVultures, stacks);
+
+				Log.Info($"[LunarRitual] Hunt: granted {stacks}x Wake of Vultures cost={cost} steamId={steamId}");
+				GenesisShards.RemoveShards(steamId, cost);
+				serverConsumedThisRun.Add(steamId);
+
+				GenesisShards.SaveShards();
+				GenesisShardsUI.RefreshUI();
+			}
+		}
+
 		private enum RitualType : byte
 		{
 			Essence = 0,
@@ -1593,7 +1731,8 @@ namespace LunarRitual
 			Blessing = 3,
 			Heresy = 4,
 			Subjugation = 5,
-			Greed = 6
+			Greed = 6,
+			Hunt = 7
 		}
 	}
 }

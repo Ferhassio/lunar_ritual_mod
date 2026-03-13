@@ -168,7 +168,18 @@ Game Code: `HeadHunter`
 
 # Installation
 
-WiP
+1. Download `LunarRitual-0.1.0.zip`
+
+2. Extract all files on ror2modman folder. Example: `C:\Users\Ferhassio\AppData\Roaming\r2modmanPlus-local\RiskOfRain2\profiles\test\BepInEx\plugins\LunarRitual`
+
+
+To build the mod from source run (libs required):
+
+```bash
+dotnet build LunarRitual.sln --configuration Release
+```
+
+Thunderstone - WiP
 
 ---
 
