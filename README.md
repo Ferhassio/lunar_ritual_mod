@@ -2,8 +2,6 @@
   <img src="https://raw.githubusercontent.com/Ferhassio/lunar_ritual_mod/refs/heads/main/IMAGES/icon.png" width="256">
 </p>
 
-<h1 align="center">Lunar Ritual</h1>
-
 See the full change history in [CHANGELOG](https://github.com/Ferhassio/lunar_ritual_mod/blob/main/CHANGELOG.MD)
 
 [![Discord](https://img.shields.io/discord/1482037560845795420?color=7289DA&label=Tech%20support%20&%20Suggestions&logo=discord&logoColor=white)](https://discord.gg/Qa74NzRqq3)
