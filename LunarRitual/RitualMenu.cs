@@ -156,7 +156,13 @@ namespace LunarRitual
 			canvas = canvasObj.AddComponent<Canvas>();
 			canvas.renderMode = RenderMode.ScreenSpaceOverlay;
 			canvas.sortingOrder = 200;
-			canvasObj.AddComponent<CanvasScaler>();
+			
+			var scaler = canvasObj.AddComponent<CanvasScaler>();
+			scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+			scaler.referenceResolution = new Vector2(1920f, 1080f);
+			scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+			scaler.matchWidthOrHeight = 0.5f;
+			
 			canvasObj.AddComponent<GraphicRaycaster>();
 
 			uiRoot = canvasObj;
@@ -179,13 +185,13 @@ namespace LunarRitual
 			panelRect.anchorMin = new Vector2(0.5f, 0.5f);
 			panelRect.anchorMax = new Vector2(0.5f, 0.5f);
 			panelRect.pivot = new Vector2(0.5f, 0.5f);
-			panelRect.sizeDelta = new Vector2(680f, 360f);
+			panelRect.sizeDelta = new Vector2(900f, 500f);
 			panelRect.anchoredPosition = Vector2.zero;
 
 			var titleObj = new GameObject("Title");
 			titleObj.transform.SetParent(panel.transform, false);
 			var title = titleObj.AddComponent<HGTextMeshProUGUI>();
-			title.fontSize = 34;
+			title.fontSize = 42;
 			title.color = new Color(0.92f, 0.85f, 1f, 1f);
 			title.fontStyle = TMPro.FontStyles.Bold;
 			title.alignment = TMPro.TextAlignmentOptions.Left;
@@ -198,13 +204,13 @@ namespace LunarRitual
 			titleRect.anchorMin = new Vector2(0f, 1f);
 			titleRect.anchorMax = new Vector2(1f, 1f);
 			titleRect.pivot = new Vector2(0.5f, 1f);
-			titleRect.sizeDelta = new Vector2(-40f, 48f);
-			titleRect.anchoredPosition = new Vector2(0f, -16f);
+			titleRect.sizeDelta = new Vector2(-50f, 60f);
+			titleRect.anchoredPosition = new Vector2(0f, -20f);
 
 			var shardsObj = new GameObject("ShardsText");
 			shardsObj.transform.SetParent(panel.transform, false);
 			shardsText = shardsObj.AddComponent<HGTextMeshProUGUI>();
-			shardsText.fontSize = 22;
+			shardsText.fontSize = 28;
 			shardsText.color = new Color(1f, 0.55f, 0.55f, 1f);
 			shardsText.fontStyle = TMPro.FontStyles.Bold;
 			shardsText.alignment = TMPro.TextAlignmentOptions.Left;
@@ -217,8 +223,8 @@ namespace LunarRitual
 			shardsRect.anchorMin = new Vector2(0f, 1f);
 			shardsRect.anchorMax = new Vector2(1f, 1f);
 			shardsRect.pivot = new Vector2(0.5f, 1f);
-			shardsRect.sizeDelta = new Vector2(-40f, 36f);
-			shardsRect.anchoredPosition = new Vector2(0f, -64f);
+			shardsRect.sizeDelta = new Vector2(-50f, 45f);
+			shardsRect.anchoredPosition = new Vector2(0f, -90f);
 
 			// Ritual selector row
 			var ritualTabs = new GameObject("RitualTabs");
@@ -227,17 +233,17 @@ namespace LunarRitual
 			tabsRect.anchorMin = new Vector2(0.5f, 1f);
 			tabsRect.anchorMax = new Vector2(0.5f, 1f);
 			tabsRect.pivot = new Vector2(0.5f, 1f);
-			tabsRect.sizeDelta = new Vector2(680f, 48f);
-			tabsRect.anchoredPosition = new Vector2(0f, -96f);
+			tabsRect.sizeDelta = new Vector2(800f, 56f);
+			tabsRect.anchoredPosition = new Vector2(0f, -140f);
 
-			CreateTabButton(ritualTabs.transform, "Essence", new Vector2(-110f, 0f), () => SelectRitual(RitualType.Essence));
+			CreateTabButton(ritualTabs.transform, "Essence", new Vector2(-130f, 0f), () => SelectRitual(RitualType.Essence));
 			CreateTabButton(ritualTabs.transform, "Ego", new Vector2(0f, 0f), () => SelectRitual(RitualType.Ego));
-			CreateTabButton(ritualTabs.transform, "Lightness", new Vector2(110f, 0f), () => SelectRitual(RitualType.Lightness));
+			CreateTabButton(ritualTabs.transform, "Lightness", new Vector2(130f, 0f), () => SelectRitual(RitualType.Lightness));
 
 			var ritualTitleObj = new GameObject("RitualTitle");
 			ritualTitleObj.transform.SetParent(panel.transform, false);
 			ritualTitleText = ritualTitleObj.AddComponent<HGTextMeshProUGUI>();
-			ritualTitleText.fontSize = 26;
+			ritualTitleText.fontSize = 32;
 			ritualTitleText.color = Color.white;
 			ritualTitleText.fontStyle = TMPro.FontStyles.Bold;
 			ritualTitleText.alignment = TMPro.TextAlignmentOptions.Left;
@@ -249,13 +255,13 @@ namespace LunarRitual
 			ritualTitleRect.anchorMin = new Vector2(0f, 1f);
 			ritualTitleRect.anchorMax = new Vector2(1f, 1f);
 			ritualTitleRect.pivot = new Vector2(0.5f, 1f);
-			ritualTitleRect.sizeDelta = new Vector2(-40f, 36f);
-			ritualTitleRect.anchoredPosition = new Vector2(0f, -152f);
+			ritualTitleRect.sizeDelta = new Vector2(-50f, 45f);
+			ritualTitleRect.anchoredPosition = new Vector2(0f, -205f);
 
 			var ritualDescObj = new GameObject("RitualDesc");
 			ritualDescObj.transform.SetParent(panel.transform, false);
 			ritualDescText = ritualDescObj.AddComponent<HGTextMeshProUGUI>();
-			ritualDescText.fontSize = 18;
+			ritualDescText.fontSize = 22;
 			ritualDescText.color = new Color(0.9f, 0.9f, 0.95f, 1f);
 			ritualDescText.alignment = TMPro.TextAlignmentOptions.Left;
 			if (ritualDescText.font == null)
@@ -266,8 +272,8 @@ namespace LunarRitual
 			ritualDescRect.anchorMin = new Vector2(0f, 1f);
 			ritualDescRect.anchorMax = new Vector2(1f, 1f);
 			ritualDescRect.pivot = new Vector2(0.5f, 1f);
-			ritualDescRect.sizeDelta = new Vector2(-40f, 70f);
-			ritualDescRect.anchoredPosition = new Vector2(0f, -188f);
+			ritualDescRect.sizeDelta = new Vector2(-50f, 90f);
+			ritualDescRect.anchoredPosition = new Vector2(0f, -255f);
 
 			var buttonsRow = new GameObject("ButtonsRow");
 			buttonsRow.transform.SetParent(panel.transform, false);
@@ -275,8 +281,8 @@ namespace LunarRitual
 			rowRect.anchorMin = new Vector2(0.5f, 0f);
 			rowRect.anchorMax = new Vector2(0.5f, 0f);
 			rowRect.pivot = new Vector2(0.5f, 0f);
-			rowRect.sizeDelta = new Vector2(640f, 70f);
-			rowRect.anchoredPosition = new Vector2(0f, 16f);
+			rowRect.sizeDelta = new Vector2(800f, 80f);
+			rowRect.anchoredPosition = new Vector2(0f, 24f);
 
 			smallBtn = CreateOfferButton(buttonsRow.transform, "Small Offering (1)", new Vector2(-210f, 0f), () => RequestSelectedRitual(OfferingTier.Small));
 			mediumBtn = CreateOfferButton(buttonsRow.transform, "Medium Offering (5)", new Vector2(0f, 0f), () => RequestSelectedRitual(OfferingTier.Medium));
@@ -302,13 +308,13 @@ namespace LunarRitual
 			rect.anchorMin = new Vector2(0.5f, 0.5f);
 			rect.anchorMax = new Vector2(0.5f, 0.5f);
 			rect.pivot = new Vector2(0.5f, 0.5f);
-			rect.sizeDelta = new Vector2(200f, 56f);
+			rect.sizeDelta = new Vector2(240f, 64f);
 			rect.anchoredPosition = anchoredPos;
 
 			var textObj = new GameObject("Text");
 			textObj.transform.SetParent(btnObj.transform, false);
 			var text = textObj.AddComponent<HGTextMeshProUGUI>();
-			text.fontSize = 18;
+			text.fontSize = 20;
 			text.color = Color.white;
 			text.fontStyle = TMPro.FontStyles.Bold;
 			text.alignment = TMPro.TextAlignmentOptions.Center;
@@ -340,13 +346,13 @@ namespace LunarRitual
 			rect.anchorMin = new Vector2(1f, 1f);
 			rect.anchorMax = new Vector2(1f, 1f);
 			rect.pivot = new Vector2(1f, 1f);
-			rect.sizeDelta = new Vector2(110f, 40f);
-			rect.anchoredPosition = new Vector2(-16f, -16f);
+			rect.sizeDelta = new Vector2(130f, 48f);
+			rect.anchoredPosition = new Vector2(-20f, -20f);
 
 			var textObj = new GameObject("Text");
 			textObj.transform.SetParent(closeObj.transform, false);
 			var text = textObj.AddComponent<HGTextMeshProUGUI>();
-			text.fontSize = 18;
+			text.fontSize = 20;
 			text.color = Color.white;
 			text.fontStyle = TMPro.FontStyles.Bold;
 			text.alignment = TMPro.TextAlignmentOptions.Center;
@@ -377,13 +383,13 @@ namespace LunarRitual
 			rect.anchorMin = new Vector2(0.5f, 0.5f);
 			rect.anchorMax = new Vector2(0.5f, 0.5f);
 			rect.pivot = new Vector2(0.5f, 0.5f);
-			rect.sizeDelta = new Vector2(200f, 40f);
+			rect.sizeDelta = new Vector2(230f, 48f);
 			rect.anchoredPosition = anchoredPos;
 
 			var textObj = new GameObject("Text");
 			textObj.transform.SetParent(btnObj.transform, false);
 			var text = textObj.AddComponent<HGTextMeshProUGUI>();
-			text.fontSize = 18;
+			text.fontSize = 20;
 			text.color = Color.white;
 			text.fontStyle = TMPro.FontStyles.Bold;
 			text.alignment = TMPro.TextAlignmentOptions.Center;
