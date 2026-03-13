@@ -4,6 +4,8 @@
 
 See the full change history in [CHANGELOG](https://github.com/Ferhassio/lunar_ritual_mod/blob/main/CHANGELOG.MD)
 
+Thunderstone mod [page](https://thunderstore.io/package/Ferhassio/LunarRitual/)
+
 [![Discord](https://img.shields.io/discord/1482037560845795420?color=7289DA&label=Tech%20support%20&%20Suggestions&logo=discord&logoColor=white)](https://discord.gg/Qa74NzRqq3)
 
 **Lunar Ritual** is a mod for **Risk of Rain 2** that introduces a persistent currency and a ritual system that allows players to start each run with powerful bonuses.
@@ -189,7 +191,7 @@ To build the mod from source run (libs required):
 dotnet build LunarRitual.sln --configuration Release
 ```
 
-Thunderstone - WiP
+Thunderstone - [Mod](https://thunderstore.io/package/Ferhassio/LunarRitual/)
 
 ---
 
