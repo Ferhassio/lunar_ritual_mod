@@ -14,7 +14,7 @@ The mod adds a new meta-progression mechanic called **Genesis Shards**, which ar
 
 ## Features
 
-- New persistent currency: **Genesis Shards**
+- New persistent currency: **Genesis Shards** [`100% drop chance for tests`]
 - Ritual system available at the start of every run
 - Multiple offering tiers with different rewards
 - Strong build-defining bonuses before the run even starts
