@@ -1,5 +1,7 @@
 # Lunar Ritual [Work in Progress]
 
+[![Discord](https://img.shields.io/discord/745162241359478894?color=7289DA&label=Tech%20support%20&%20Suggestions&logo=discord&logoColor=white)](https://discord.gg/Qa74NzRqq3)
+
 **Lunar Ritual** is a mod for **Risk of Rain 2** that introduces a persistent currency and a ritual system that allows players to start each run with powerful bonuses.
 
 ![](https://raw.githubusercontent.com/Ferhassio/lunar_ritual_mod/refs/heads/main/IMAGES/RitualMenuExample.PNG)
