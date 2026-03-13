@@ -49,6 +49,7 @@ namespace LunarRitual
 			NetworkingAPI.RegisterMessageType<RitualOfBlessingRequest>();
 			NetworkingAPI.RegisterMessageType<RitualOfHeresyRequest>();
 			NetworkingAPI.RegisterMessageType<RitualOfSubjugationRequest>();
+			NetworkingAPI.RegisterMessageType<RitualOfGreedRequest>();
 			Log.Info("[LunarRitual] RitualMenu initialized + message registered");
 
 			EnsureBootstrap();
@@ -256,9 +257,12 @@ namespace LunarRitual
 			row2Rect.sizeDelta = new Vector2(800f, 56f);
 			row2Rect.anchoredPosition = new Vector2(0f, -196f);
 
-			// Second row: 2 buttons centered
-			CreateTabButton(ritualTabsRow2.transform, "Heresy", new Vector2(-93.33f, 0f), () => SelectRitual(RitualType.Heresy));
-			CreateTabButton(ritualTabsRow2.transform, "Subjugation", new Vector2(93.33f, 0f), () => SelectRitual(RitualType.Subjugation));
+			// Second row: 3 buttons
+			// Button width: 180f, Spacing: 65f between edges
+			// Centers: -245, 0, 245
+			CreateTabButton(ritualTabsRow2.transform, "Heresy", new Vector2(-245f, 0f), () => SelectRitual(RitualType.Heresy));
+			CreateTabButton(ritualTabsRow2.transform, "Subjugation", new Vector2(0f, 0f), () => SelectRitual(RitualType.Subjugation));
+			CreateTabButton(ritualTabsRow2.transform, "Greed", new Vector2(245f, 0f), () => SelectRitual(RitualType.Greed));
 
 			var ritualTitleObj = new GameObject("RitualTitle");
 			ritualTitleObj.transform.SetParent(panel.transform, false);
@@ -462,6 +466,11 @@ namespace LunarRitual
 					ritualDescText.text = "Gain summoner items.\n1: 1 stack • 5: 3 stacks • 10: 4 stacks\n(Happiest Mask and Newly Hatched Zoea)";
 					SetOfferingButtonsActive(true, true, true);
 					break;
+				case RitualType.Greed:
+					ritualTitleText.text = "Ritual of Greed";
+					ritualDescText.text = "Receive gold at start of run.\n1: 100–200 gold • 5: 500–1000 gold • 10: 1000–5000 gold";
+					SetOfferingButtonsActive(true, true, true);
+					break;
 			}
 		}
 
@@ -494,7 +503,50 @@ namespace LunarRitual
 				case RitualType.Subjugation:
 					RequestSubjugation(tier);
 					break;
+				case RitualType.Greed:
+					RequestGreed(tier);
+					break;
 			}
+		}
+
+		private static void RequestGreed(OfferingTier tier)
+		{
+			Log.Info($"[LunarRitual] Ritual of Greed clicked: {tier}. NetworkServer.active={NetworkServer.active}");
+			RefreshShardsText();
+
+			if (NetworkUser.readOnlyLocalPlayersList == null || NetworkUser.readOnlyLocalPlayersList.Count <= 0)
+			{
+				Log.Warning("[LunarRitual] Ritual click ignored: no local players");
+				return;
+			}
+			var user = NetworkUser.readOnlyLocalPlayersList[0];
+			if (user == null)
+			{
+				Log.Warning("[LunarRitual] Ritual click ignored: local user is null");
+				return;
+			}
+
+			Log.Info($"[LunarRitual] Ritual click: local steamId={user.id.value}, netId={user.netId}");
+
+			var msg = new RitualOfGreedRequest
+			{
+				networkUserNetId = user.netId,
+				tier = tier
+			};
+
+			if (NetworkServer.active)
+			{
+				Log.Info("[LunarRitual] Handling ritual locally (host)");
+				msg.OnReceived();
+			}
+			else
+			{
+				Log.Info("[LunarRitual] Sending ritual request to server");
+				msg.Send(NetworkDestination.Server);
+			}
+
+			InvokeDelayed(0.15f, RefreshShardsText);
+			Close();
 		}
 
 		private static void RequestSubjugation(OfferingTier tier)
@@ -1442,6 +1494,97 @@ namespace LunarRitual
 			}
 		}
 
+		private struct RitualOfGreedRequest : INetMessage
+		{
+			public NetworkInstanceId networkUserNetId;
+			public OfferingTier tier;
+
+			public void Serialize(NetworkWriter writer)
+			{
+				writer.Write(networkUserNetId);
+				writer.Write((byte)tier);
+			}
+
+			public void Deserialize(NetworkReader reader)
+			{
+				networkUserNetId = reader.ReadNetworkId();
+				tier = (OfferingTier)reader.ReadByte();
+			}
+
+			public void OnReceived()
+			{
+				Log.Info($"[LunarRitual] RitualOfGreedRequest.OnReceived. NetworkServer.active={NetworkServer.active}, netId={networkUserNetId.Value}, tier={tier}");
+				if (!NetworkServer.active) return;
+
+				GameObject userObj = NetworkServer.FindLocalObject(networkUserNetId);
+				if (!userObj) return;
+
+				NetworkUser user = userObj.GetComponent<NetworkUser>();
+				if (!user) return;
+
+				ulong steamId = user.id.value;
+				if (serverConsumedThisRun.Contains(steamId))
+				{
+					Log.Info($"[LunarRitual] Greed: ritual already consumed this run. steamId={steamId}");
+					return;
+				}
+
+				int cost = tier switch
+				{
+					OfferingTier.Small => SmallCost,
+					OfferingTier.Medium => MediumCost,
+					OfferingTier.Grand => GrandCost,
+					_ => 0
+				};
+				if (cost <= 0) return;
+
+				int shards = GenesisShards.GetShards(steamId);
+				if (shards < cost)
+				{
+					Log.Info($"[LunarRitual] Greed: not enough shards. steamId={steamId} shards={shards} cost={cost}");
+					return;
+				}
+
+				var master = user.master;
+				if (!master || master.inventory == null) return;
+
+				// Define gold rewards based on tier
+				// Small: 100-200 gold
+				// Medium: 500-1000 gold
+				// Grand: 1000-5000 gold
+
+				int min = tier switch
+				{
+					OfferingTier.Small => 100,
+					OfferingTier.Medium => 500,
+					OfferingTier.Grand => 1000,
+					_ => 0
+				};
+				int maxInclusive = tier switch
+				{
+					OfferingTier.Small => 200,
+					OfferingTier.Medium => 1000,
+					OfferingTier.Grand => 5000,
+					_ => 0
+				};
+				if (min <= 0 || maxInclusive < min) return;
+
+				int gold = Run.instance != null
+					? Run.instance.treasureRng.RangeInt(min, maxInclusive + 1)
+					: UnityEngine.Random.Range(min, maxInclusive + 1);
+
+				// Grant gold to the player
+				master.GiveMoney((uint)gold);
+
+				Log.Info($"[LunarRitual] Greed: granted {gold} gold cost={cost} steamId={steamId}");
+				GenesisShards.RemoveShards(steamId, cost);
+				serverConsumedThisRun.Add(steamId);
+
+				GenesisShards.SaveShards();
+				GenesisShardsUI.RefreshUI();
+			}
+		}
+
 		private enum RitualType : byte
 		{
 			Essence = 0,
@@ -1449,7 +1592,8 @@ namespace LunarRitual
 			Lightness = 2,
 			Blessing = 3,
 			Heresy = 4,
-			Subjugation = 5
+			Subjugation = 5,
+			Greed = 6
 		}
 	}
 }

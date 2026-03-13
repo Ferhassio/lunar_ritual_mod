@@ -149,6 +149,23 @@ Receive a large amount of **gold at the start of the run**.
 
 ---
 
+## Ritual of Hunt
+
+Grants stacks of the item **Wake of Vultures**.
+
+| Offering | Reward |
+|---|---|
+| 1 coin | 1 stack |
+| 5 coins | 3 stacks |
+| 10 coins | 5 stacks |
+
+Items received:
+
+Item: `Wake of Vultures`  
+Game Code: `HeadHunter`
+
+---
+
 # Installation
 
 WiP
