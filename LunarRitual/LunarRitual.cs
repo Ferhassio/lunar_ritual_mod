@@ -5,7 +5,9 @@ using R2API;
 namespace LunarRitual
 {
 	[BepInDependency("com.rune580.riskofoptions", BepInDependency.DependencyFlags.SoftDependency)]
+	/* ProperSave temporarily disabled
 	[BepInDependency("com.KingEnderBrine.ProperSave", BepInDependency.DependencyFlags.SoftDependency)]
+	*/
 	[BepInPlugin(PluginGUID, PluginName, PluginVersion)]
 	public class LunarRitual : BaseUnityPlugin
 	{

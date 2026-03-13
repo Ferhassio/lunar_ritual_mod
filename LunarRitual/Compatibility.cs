@@ -27,6 +27,7 @@ namespace LunarRitual
 		}
 	}
 
+	/* ProperSave temporarily disabled
 	public static class ProperSaveCompatibility
 	{
 		private static bool? _enabled;
@@ -70,4 +71,5 @@ namespace LunarRitual
 			this.playerShards = playerShards;
 		}
 	}
+	*/
 }
