@@ -2,11 +2,11 @@
 
 **Lunar Ritual** is a mod for **Risk of Rain 2** that introduces a persistent currency and a ritual system that allows players to start each run with powerful bonuses.
 
-![](https://raw.githubusercontent.com/Ferhassio/lunar_ritual_mod/refs/heads/master/Images/RitualMenuExample.PNG)
+![](https://raw.githubusercontent.com/Ferhassio/lunar_ritual_mod/refs/heads/master/IMAGES/RitualMenuExample.PNG)
 
 The mod adds a new meta-progression mechanic called **Genesis Shards**, which are stored between runs and can be spent on powerful **Lunar Rituals** before the run begins.
 
-![](https://raw.githubusercontent.com/Ferhassio/lunar_ritual_mod/refs/heads/master/Images/SmallShardsCounter.PNG)
+![](https://raw.githubusercontent.com/Ferhassio/lunar_ritual_mod/refs/heads/master/IMAGES/SmallShardsCounter.PNG)
 
 ---
 
