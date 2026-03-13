@@ -45,6 +45,7 @@ namespace LunarRitual
 
 			NetworkingAPI.RegisterMessageType<RitualOfEssenceRequest>();
 			NetworkingAPI.RegisterMessageType<RitualOfEgoRequest>();
+			NetworkingAPI.RegisterMessageType<RitualOfLightnessRequest>();
 			Log.Info("[LunarRitual] RitualMenu initialized + message registered");
 
 			EnsureBootstrap();
@@ -226,11 +227,12 @@ namespace LunarRitual
 			tabsRect.anchorMin = new Vector2(0.5f, 1f);
 			tabsRect.anchorMax = new Vector2(0.5f, 1f);
 			tabsRect.pivot = new Vector2(0.5f, 1f);
-			tabsRect.sizeDelta = new Vector2(640f, 48f);
+			tabsRect.sizeDelta = new Vector2(680f, 48f);
 			tabsRect.anchoredPosition = new Vector2(0f, -96f);
 
 			CreateTabButton(ritualTabs.transform, "Essence", new Vector2(-110f, 0f), () => SelectRitual(RitualType.Essence));
-			CreateTabButton(ritualTabs.transform, "Ego", new Vector2(110f, 0f), () => SelectRitual(RitualType.Ego));
+			CreateTabButton(ritualTabs.transform, "Ego", new Vector2(0f, 0f), () => SelectRitual(RitualType.Ego));
+			CreateTabButton(ritualTabs.transform, "Lightness", new Vector2(110f, 0f), () => SelectRitual(RitualType.Lightness));
 
 			var ritualTitleObj = new GameObject("RitualTitle");
 			ritualTitleObj.transform.SetParent(panel.transform, false);
@@ -274,7 +276,7 @@ namespace LunarRitual
 			rowRect.anchorMax = new Vector2(0.5f, 0f);
 			rowRect.pivot = new Vector2(0.5f, 0f);
 			rowRect.sizeDelta = new Vector2(640f, 70f);
-			rowRect.anchoredPosition = new Vector2(0f, 72f);
+			rowRect.anchoredPosition = new Vector2(0f, 16f);
 
 			smallBtn = CreateOfferButton(buttonsRow.transform, "Small Offering (1)", new Vector2(-210f, 0f), () => RequestSelectedRitual(OfferingTier.Small));
 			mediumBtn = CreateOfferButton(buttonsRow.transform, "Medium Offering (5)", new Vector2(0f, 0f), () => RequestSelectedRitual(OfferingTier.Medium));
@@ -414,6 +416,11 @@ namespace LunarRitual
 					ritualDescText.text = "Gain stacks of Egocentrism (LunarSun).\n1: 1–3 • 5: 4–6 • 10: 7–10";
 					SetOfferingButtonsActive(true, true, true);
 					break;
+				case RitualType.Lightness:
+					ritualTitleText.text = "Ritual of Lightness";
+					ritualDescText.text = "Gain stacks of Hopoo Feathers.\n1: 1 • 5: 2–4 • 10: 5–10";
+					SetOfferingButtonsActive(true, true, true);
+					break;
 			}
 		}
 
@@ -433,6 +440,9 @@ namespace LunarRitual
 					break;
 				case RitualType.Ego:
 					RequestEgo(tier);
+					break;
+				case RitualType.Lightness:
+					RequestLightness(tier);
 					break;
 			}
 		}
@@ -497,6 +507,46 @@ namespace LunarRitual
 			Log.Info($"[LunarRitual] Ritual click: local steamId={user.id.value}, netId={user.netId}");
 
 			var msg = new RitualOfEgoRequest
+			{
+				networkUserNetId = user.netId,
+				tier = tier
+			};
+
+			if (NetworkServer.active)
+			{
+				Log.Info("[LunarRitual] Handling ritual locally (host)");
+				msg.OnReceived();
+			}
+			else
+			{
+				Log.Info("[LunarRitual] Sending ritual request to server");
+				msg.Send(NetworkDestination.Server);
+			}
+
+			InvokeDelayed(0.15f, RefreshShardsText);
+			Close();
+		}
+
+		private static void RequestLightness(OfferingTier tier)
+		{
+			Log.Info($"[LunarRitual] Ritual of Lightness clicked: {tier}. NetworkServer.active={NetworkServer.active}");
+			RefreshShardsText();
+
+			if (NetworkUser.readOnlyLocalPlayersList == null || NetworkUser.readOnlyLocalPlayersList.Count <= 0)
+			{
+				Log.Warning("[LunarRitual] Ritual click ignored: no local players");
+				return;
+			}
+			var user = NetworkUser.readOnlyLocalPlayersList[0];
+			if (user == null)
+			{
+				Log.Warning("[LunarRitual] Ritual click ignored: local user is null");
+				return;
+			}
+
+			Log.Info($"[LunarRitual] Ritual click: local steamId={user.id.value}, netId={user.netId}");
+
+			var msg = new RitualOfLightnessRequest
 			{
 				networkUserNetId = user.netId,
 				tier = tier
@@ -759,6 +809,93 @@ namespace LunarRitual
 			}
 		}
 
+		private struct RitualOfLightnessRequest : INetMessage
+		{
+			public NetworkInstanceId networkUserNetId;
+			public OfferingTier tier;
+
+			public void Serialize(NetworkWriter writer)
+			{
+				writer.Write(networkUserNetId);
+				writer.Write((byte)tier);
+			}
+
+			public void Deserialize(NetworkReader reader)
+			{
+				networkUserNetId = reader.ReadNetworkId();
+				tier = (OfferingTier)reader.ReadByte();
+			}
+
+			public void OnReceived()
+			{
+				Log.Info($"[LunarRitual] RitualOfLightnessRequest.OnReceived. NetworkServer.active={NetworkServer.active}, netId={networkUserNetId.Value}, tier={tier}");
+				if (!NetworkServer.active) return;
+
+				GameObject userObj = NetworkServer.FindLocalObject(networkUserNetId);
+				if (!userObj) return;
+
+				NetworkUser user = userObj.GetComponent<NetworkUser>();
+				if (!user) return;
+
+				ulong steamId = user.id.value;
+				if (serverConsumedThisRun.Contains(steamId))
+				{
+					Log.Info($"[LunarRitual] Lightness: ritual already consumed this run. steamId={steamId}");
+					return;
+				}
+
+				int cost = tier switch
+				{
+					OfferingTier.Small => SmallCost,
+					OfferingTier.Medium => MediumCost,
+					OfferingTier.Grand => GrandCost,
+					_ => 0
+				};
+				if (cost <= 0) return;
+
+				int shards = GenesisShards.GetShards(steamId);
+				if (shards < cost)
+				{
+					Log.Info($"[LunarRitual] Lightness: not enough shards. steamId={steamId} shards={shards} cost={cost}");
+					return;
+				}
+
+				var master = user.master;
+				if (!master || master.inventory == null) return;
+
+				ItemIndex featherItem = ItemCatalog.FindItemIndex("Feather");
+				if (featherItem == ItemIndex.None) return;
+
+				int min = tier switch
+				{
+					OfferingTier.Small => 1,
+					OfferingTier.Medium => 2,
+					OfferingTier.Grand => 5,
+					_ => 0
+				};
+				int maxInclusive = tier switch
+				{
+					OfferingTier.Small => 1,
+					OfferingTier.Medium => 4,
+					OfferingTier.Grand => 10,
+					_ => 0
+				};
+				if (min <= 0 || maxInclusive < min) return;
+
+				int stacks = Run.instance != null
+					? Run.instance.treasureRng.RangeInt(min, maxInclusive + 1)
+					: UnityEngine.Random.Range(min, maxInclusive + 1);
+
+				Log.Info($"[LunarRitual] Lightness: granting {stacks}x {featherItem} cost={cost} steamId={steamId}");
+				GenesisShards.RemoveShards(steamId, cost);
+				master.inventory.GiveItem(featherItem, stacks);
+				serverConsumedThisRun.Add(steamId);
+
+				GenesisShards.SaveShards();
+				GenesisShardsUI.RefreshUI();
+			}
+		}
+
 		private static ItemIndex RitualOfEssenceServerRollItem(OfferingTier tier)
 		{
 			if (Run.instance == null) return ItemIndex.None;
@@ -818,7 +955,8 @@ namespace LunarRitual
 		private enum RitualType : byte
 		{
 			Essence = 0,
-			Ego = 1
+			Ego = 1,
+			Lightness = 2
 		}
 	}
 }
