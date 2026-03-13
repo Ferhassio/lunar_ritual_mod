@@ -236,9 +236,9 @@ namespace LunarRitual
 			tabsRect.sizeDelta = new Vector2(800f, 56f);
 			tabsRect.anchoredPosition = new Vector2(0f, -140f);
 
-			CreateTabButton(ritualTabs.transform, "Essence", new Vector2(-130f, 0f), () => SelectRitual(RitualType.Essence));
+			CreateTabButton(ritualTabs.transform, "Essence", new Vector2(-240f, 0f), () => SelectRitual(RitualType.Essence));
 			CreateTabButton(ritualTabs.transform, "Ego", new Vector2(0f, 0f), () => SelectRitual(RitualType.Ego));
-			CreateTabButton(ritualTabs.transform, "Lightness", new Vector2(130f, 0f), () => SelectRitual(RitualType.Lightness));
+			CreateTabButton(ritualTabs.transform, "Lightness", new Vector2(240f, 0f), () => SelectRitual(RitualType.Lightness));
 
 			var ritualTitleObj = new GameObject("RitualTitle");
 			ritualTitleObj.transform.SetParent(panel.transform, false);
@@ -284,9 +284,9 @@ namespace LunarRitual
 			rowRect.sizeDelta = new Vector2(800f, 80f);
 			rowRect.anchoredPosition = new Vector2(0f, 24f);
 
-			smallBtn = CreateOfferButton(buttonsRow.transform, "Small Offering (1)", new Vector2(-210f, 0f), () => RequestSelectedRitual(OfferingTier.Small));
+			smallBtn = CreateOfferButton(buttonsRow.transform, "Small Offering (1)", new Vector2(-270f, 0f), () => RequestSelectedRitual(OfferingTier.Small));
 			mediumBtn = CreateOfferButton(buttonsRow.transform, "Medium Offering (5)", new Vector2(0f, 0f), () => RequestSelectedRitual(OfferingTier.Medium));
-			grandBtn = CreateOfferButton(buttonsRow.transform, "Grand Offering (10)", new Vector2(210f, 0f), () => RequestSelectedRitual(OfferingTier.Grand));
+			grandBtn = CreateOfferButton(buttonsRow.transform, "Grand Offering (10)", new Vector2(270f, 0f), () => RequestSelectedRitual(OfferingTier.Grand));
 
 			CreateCloseButton(panel.transform);
 
