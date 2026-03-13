@@ -122,12 +122,18 @@ Items received:
 
 ## Ritual of Subjugation
 
-Cost: **10 coins only**
+Starts summoner gameplay. Add Happiest Mask and Newly Hatched Zoea.
 
-Grants the legendary item:
+| Offering | Reward |
+|---|---|
+| 1 coin | 1 stack |
+| 5 coins | 3 stacks |
+| 10 coins | 4 stacks |
 
-Item: `Happiest Mask`  
-Game Code: `GhostOnKill`
+Items received:
+
+Items: `Happiest Mask` and `Newly Hatched Zoea`
+Game Code: `GhostOnKill` and `VoidMegaCrabItem`
 
 ---
 

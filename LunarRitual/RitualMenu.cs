@@ -48,6 +48,7 @@ namespace LunarRitual
 			NetworkingAPI.RegisterMessageType<RitualOfLightnessRequest>();
 			NetworkingAPI.RegisterMessageType<RitualOfBlessingRequest>();
 			NetworkingAPI.RegisterMessageType<RitualOfHeresyRequest>();
+			NetworkingAPI.RegisterMessageType<RitualOfSubjugationRequest>();
 			Log.Info("[LunarRitual] RitualMenu initialized + message registered");
 
 			EnsureBootstrap();
@@ -228,21 +229,36 @@ namespace LunarRitual
 			shardsRect.sizeDelta = new Vector2(-50f, 45f);
 			shardsRect.anchoredPosition = new Vector2(0f, -90f);
 
-			// Ritual selector row
-			var ritualTabs = new GameObject("RitualTabs");
-			ritualTabs.transform.SetParent(panel.transform, false);
-			var tabsRect = ritualTabs.AddComponent<RectTransform>();
-			tabsRect.anchorMin = new Vector2(0.5f, 1f);
-			tabsRect.anchorMax = new Vector2(0.5f, 1f);
-			tabsRect.pivot = new Vector2(0.5f, 1f);
-			tabsRect.sizeDelta = new Vector2(800f, 56f);
-			tabsRect.anchoredPosition = new Vector2(0f, -140f);
+			// Ritual selector rows (4 buttons per row)
+			// Container width: 800f, Button width: 180f, Spacing: 26.67f between buttons
+			// Left edges: -358.34, -151.67, 51.67, 258.34
+			// Centers: -268.34, -61.67, 141.67, 348.34
+			var ritualTabsRow1 = new GameObject("RitualTabsRow1");
+			ritualTabsRow1.transform.SetParent(panel.transform, false);
+			var row1Rect = ritualTabsRow1.AddComponent<RectTransform>();
+			row1Rect.anchorMin = new Vector2(0.5f, 1f);
+			row1Rect.anchorMax = new Vector2(0.5f, 1f);
+			row1Rect.pivot = new Vector2(0.5f, 1f);
+			row1Rect.sizeDelta = new Vector2(800f, 56f);
+			row1Rect.anchoredPosition = new Vector2(0f, -140f);
 
-			CreateTabButton(ritualTabs.transform, "Essence", new Vector2(-360f, 0f), () => SelectRitual(RitualType.Essence));
-			CreateTabButton(ritualTabs.transform, "Ego", new Vector2(-180f, 0f), () => SelectRitual(RitualType.Ego));
-			CreateTabButton(ritualTabs.transform, "Lightness", new Vector2(0f, 0f), () => SelectRitual(RitualType.Lightness));
-			CreateTabButton(ritualTabs.transform, "Blessing", new Vector2(180f, 0f), () => SelectRitual(RitualType.Blessing));
-			CreateTabButton(ritualTabs.transform, "Heresy", new Vector2(360f, 0f), () => SelectRitual(RitualType.Heresy));
+			CreateTabButton(ritualTabsRow1.transform, "Essence", new Vector2(-268.34f, 0f), () => SelectRitual(RitualType.Essence));
+			CreateTabButton(ritualTabsRow1.transform, "Ego", new Vector2(-61.67f, 0f), () => SelectRitual(RitualType.Ego));
+			CreateTabButton(ritualTabsRow1.transform, "Lightness", new Vector2(141.67f, 0f), () => SelectRitual(RitualType.Lightness));
+			CreateTabButton(ritualTabsRow1.transform, "Blessing", new Vector2(348.34f, 0f), () => SelectRitual(RitualType.Blessing));
+
+			var ritualTabsRow2 = new GameObject("RitualTabsRow2");
+			ritualTabsRow2.transform.SetParent(panel.transform, false);
+			var row2Rect = ritualTabsRow2.AddComponent<RectTransform>();
+			row2Rect.anchorMin = new Vector2(0.5f, 1f);
+			row2Rect.anchorMax = new Vector2(0.5f, 1f);
+			row2Rect.pivot = new Vector2(0.5f, 1f);
+			row2Rect.sizeDelta = new Vector2(800f, 56f);
+			row2Rect.anchoredPosition = new Vector2(0f, -196f);
+
+			// Second row: 2 buttons centered
+			CreateTabButton(ritualTabsRow2.transform, "Heresy", new Vector2(-93.33f, 0f), () => SelectRitual(RitualType.Heresy));
+			CreateTabButton(ritualTabsRow2.transform, "Subjugation", new Vector2(93.33f, 0f), () => SelectRitual(RitualType.Subjugation));
 
 			var ritualTitleObj = new GameObject("RitualTitle");
 			ritualTitleObj.transform.SetParent(panel.transform, false);
@@ -260,7 +276,7 @@ namespace LunarRitual
 			ritualTitleRect.anchorMax = new Vector2(1f, 1f);
 			ritualTitleRect.pivot = new Vector2(0.5f, 1f);
 			ritualTitleRect.sizeDelta = new Vector2(-50f, 45f);
-			ritualTitleRect.anchoredPosition = new Vector2(0f, -205f);
+			ritualTitleRect.anchoredPosition = new Vector2(0f, -265f);
 
 			var ritualDescObj = new GameObject("RitualDesc");
 			ritualDescObj.transform.SetParent(panel.transform, false);
@@ -277,7 +293,7 @@ namespace LunarRitual
 			ritualDescRect.anchorMax = new Vector2(1f, 1f);
 			ritualDescRect.pivot = new Vector2(0.5f, 1f);
 			ritualDescRect.sizeDelta = new Vector2(-50f, 90f);
-			ritualDescRect.anchoredPosition = new Vector2(0f, -255f);
+			ritualDescRect.anchoredPosition = new Vector2(0f, -315f);
 
 			var buttonsRow = new GameObject("ButtonsRow");
 			buttonsRow.transform.SetParent(panel.transform, false);
@@ -387,7 +403,7 @@ namespace LunarRitual
 			rect.anchorMin = new Vector2(0.5f, 0.5f);
 			rect.anchorMax = new Vector2(0.5f, 0.5f);
 			rect.pivot = new Vector2(0.5f, 0.5f);
-			rect.sizeDelta = new Vector2(230f, 48f);
+			rect.sizeDelta = new Vector2(180f, 48f);
 			rect.anchoredPosition = anchoredPos;
 
 			var textObj = new GameObject("Text");
@@ -441,6 +457,11 @@ namespace LunarRitual
 					ritualDescText.text = "Gain Heresy items for Heretic transformation.\n1: 1 stack • 5: 2–3 stacks • 10: 4–5 stacks\n(All 4 Heresy items)";
 					SetOfferingButtonsActive(true, true, true);
 					break;
+				case RitualType.Subjugation:
+					ritualTitleText.text = "Ritual of Subjugation";
+					ritualDescText.text = "Gain summoner items.\n1: 1 stack • 5: 3 stacks • 10: 4 stacks\n(Happiest Mask and Newly Hatched Zoea)";
+					SetOfferingButtonsActive(true, true, true);
+					break;
 			}
 		}
 
@@ -470,7 +491,50 @@ namespace LunarRitual
 				case RitualType.Heresy:
 					RequestHeresy(tier);
 					break;
+				case RitualType.Subjugation:
+					RequestSubjugation(tier);
+					break;
 			}
+		}
+
+		private static void RequestSubjugation(OfferingTier tier)
+		{
+			Log.Info($"[LunarRitual] Ritual of Subjugation clicked: {tier}. NetworkServer.active={NetworkServer.active}");
+			RefreshShardsText();
+
+			if (NetworkUser.readOnlyLocalPlayersList == null || NetworkUser.readOnlyLocalPlayersList.Count <= 0)
+			{
+				Log.Warning("[LunarRitual] Ritual click ignored: no local players");
+				return;
+			}
+			var user = NetworkUser.readOnlyLocalPlayersList[0];
+			if (user == null)
+			{
+				Log.Warning("[LunarRitual] Ritual click ignored: local user is null");
+				return;
+			}
+
+			Log.Info($"[LunarRitual] Ritual click: local steamId={user.id.value}, netId={user.netId}");
+
+			var msg = new RitualOfSubjugationRequest
+			{
+				networkUserNetId = user.netId,
+				tier = tier
+			};
+
+			if (NetworkServer.active)
+			{
+				Log.Info("[LunarRitual] Handling ritual locally (host)");
+				msg.OnReceived();
+			}
+			else
+			{
+				Log.Info("[LunarRitual] Sending ritual request to server");
+				msg.Send(NetworkDestination.Server);
+			}
+
+			InvokeDelayed(0.15f, RefreshShardsText);
+			Close();
 		}
 
 		private static void RequestHeresy(OfferingTier tier)
@@ -1231,6 +1295,97 @@ namespace LunarRitual
 			}
 		}
 
+		private struct RitualOfSubjugationRequest : INetMessage
+		{
+			public NetworkInstanceId networkUserNetId;
+			public OfferingTier tier;
+
+			public void Serialize(NetworkWriter writer)
+			{
+				writer.Write(networkUserNetId);
+				writer.Write((byte)tier);
+			}
+
+			public void Deserialize(NetworkReader reader)
+			{
+				networkUserNetId = reader.ReadNetworkId();
+				tier = (OfferingTier)reader.ReadByte();
+			}
+
+			public void OnReceived()
+			{
+				Log.Info($"[LunarRitual] RitualOfSubjugationRequest.OnReceived. NetworkServer.active={NetworkServer.active}, netId={networkUserNetId.Value}, tier={tier}");
+				if (!NetworkServer.active) return;
+
+				GameObject userObj = NetworkServer.FindLocalObject(networkUserNetId);
+				if (!userObj) return;
+
+				NetworkUser user = userObj.GetComponent<NetworkUser>();
+				if (!user) return;
+
+				ulong steamId = user.id.value;
+				if (serverConsumedThisRun.Contains(steamId))
+				{
+					Log.Info($"[LunarRitual] Subjugation: ritual already consumed this run. steamId={steamId}");
+					return;
+				}
+
+				int cost = tier switch
+				{
+					OfferingTier.Small => SmallCost,
+					OfferingTier.Medium => MediumCost,
+					OfferingTier.Grand => GrandCost,
+					_ => 0
+				};
+				if (cost <= 0) return;
+
+				int shards = GenesisShards.GetShards(steamId);
+				if (shards < cost)
+				{
+					Log.Info($"[LunarRitual] Subjugation: not enough shards. steamId={steamId} shards={shards} cost={cost}");
+					return;
+				}
+
+				var master = user.master;
+				if (!master || master.inventory == null) return;
+
+				// Define Subjugation item stacks based on tier
+				// Small: 1 stack
+				// Medium: 3 stacks
+				// Grand: 4 stacks
+
+				int stacks = tier switch
+				{
+					OfferingTier.Small => 1,
+					OfferingTier.Medium => 3,
+					OfferingTier.Grand => 4,
+					_ => 0
+				};
+				if (stacks <= 0) return;
+
+				// Get both summoner items
+				ItemIndex happiestMask = ItemCatalog.FindItemIndex("GhostOnKill");
+				ItemIndex newlyHatchedZoea = ItemCatalog.FindItemIndex("VoidMegaCrabItem");
+
+				if (happiestMask == ItemIndex.None || newlyHatchedZoea == ItemIndex.None)
+				{
+					Log.Warning("[LunarRitual] Subjugation: one or more summoner items not found in ItemCatalog");
+					return;
+				}
+
+				// Grant both items with the same stack count
+				master.inventory.GiveItem(happiestMask, stacks);
+				master.inventory.GiveItem(newlyHatchedZoea, stacks);
+
+				Log.Info($"[LunarRitual] Subjugation: granted {stacks}x Happiest Mask and {stacks}x Newly Hatched Zoea cost={cost} steamId={steamId}");
+				GenesisShards.RemoveShards(steamId, cost);
+				serverConsumedThisRun.Add(steamId);
+
+				GenesisShards.SaveShards();
+				GenesisShardsUI.RefreshUI();
+			}
+		}
+
 		private static ItemIndex RitualOfEssenceServerRollItem(OfferingTier tier)
 		{
 			if (Run.instance == null) return ItemIndex.None;
@@ -1293,7 +1448,8 @@ namespace LunarRitual
 			Ego = 1,
 			Lightness = 2,
 			Blessing = 3,
-			Heresy = 4
+			Heresy = 4,
+			Subjugation = 5
 		}
 	}
 }
