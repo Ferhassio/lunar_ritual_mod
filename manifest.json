@@ -1,0 +1,12 @@
+{
+    "name": "LunarRitual",
+    "author": "Ferhassio",
+    "version_number": "0.1.0",
+    "website_url": "https://github.com/Ferhassio/lunar_ritual_mod",
+    "description": "A mod for Risk of Rain 2 that introduces a persistent currency and a ritual system that allows players to start each run with powerful bonuses.",
+    "dependencies": [
+        "bbepis-BepInExPack-5.4.21",
+        "tristanmcpherson-R2API-5.0.5",
+        "Rune580-Risk_Of_Options-2.8.0"
+    ]
+}

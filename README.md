@@ -1,4 +1,8 @@
-# Lunar Ritual [Work in Progress]
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Ferhassio/lunar_ritual_mod/main/IMAGES/icon.PNG" width="256">
+</p>
+
+<h1 align="center">Lunar Ritual</h1>
 
 See the full change history in [CHANGELOG](https://github.com/Ferhassio/lunar_ritual_mod/blob/main/CHANGELOG.MD)
 
