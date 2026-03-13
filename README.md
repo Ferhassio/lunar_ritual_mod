@@ -1,6 +1,6 @@
 # Lunar Ritual [Work in Progress]
 
-See the full change history in [CHANGELOG](https://github.com/Ferhassio/lunar_ritual_mod/blob/main/README.md)
+See the full change history in [CHANGELOG](https://github.com/Ferhassio/lunar_ritual_mod/blob/main/CHANGELOG.MD)
 
 [![Discord](https://img.shields.io/discord/1482037560845795420?color=7289DA&label=Tech%20support%20&%20Suggestions&logo=discord&logoColor=white)](https://discord.gg/Qa74NzRqq3)
 
