@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Ferhassio/lunar_ritual_mod/main/IMAGES/icon.PNG" width="256">
+  <img src="https://raw.githubusercontent.com/Ferhassio/lunar_ritual_mod/refs/heads/main/IMAGES/icon.png" width="256">
 </p>
 
 <h1 align="center">Lunar Ritual</h1>
