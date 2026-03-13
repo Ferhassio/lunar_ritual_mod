@@ -110,10 +110,10 @@ Grants the full **Heresy set**, allowing transformation into the hidden characte
 
 Items received:
 
-- `Visions of Heresy`
-- `Hooks of Heresy`
-- `Strides of Heresy`
-- `Essence of Heresy`
+- `Visions of Heresy` (Game code: LunarPrimaryReplacement)
+- `Hooks of Heresy` (Game code: LunarSecondaryReplacement)
+- `Strides of Heresy` (Game code: LunarUtilityReplacement)
+- `Essence of Heresy` (Game code: LunarSpecialReplacement)
 
 ---
 

@@ -1,442 +1,825 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.UI;
+using R2API.Networking;
+using R2API.Networking.Interfaces;
 using RoR2;
 using RoR2.UI;
-using TMPro;
+using UnityEngine;
+using UnityEngine.AddressableAssets;
 using UnityEngine.Networking;
+using UnityEngine.UI;
 
 namespace LunarRitual
 {
-    public class RitualMenu : MonoBehaviour
-    {
-        /*
-        private static GameObject menuPanel;
-        private static bool menuOpened = false;
-        private static bool optionSelected = false;
-        
-        private static Dictionary<ulong, int> playerOfferings = new Dictionary<ulong, int>();
-        */
-        
-        public static void Initialize()
-        {
-            /*
-            Run.onRunStartGlobal += OnRunStart;
-            RoR2Application.onLoad += CreateMenuUI;
-            */
-            Log.Info($"[LunarRitual] RitualMenu initialized (disabled for testing)");
-        }
-        
-        /*
-        private static void CreateMenuUI()
-        {
-            if (menuPanel != null) return;
-            
-            menuPanel = new GameObject("RitualMenuPanel");
-            menuPanel.AddComponent<Canvas>();
-            menuPanel.AddComponent<CanvasScaler>();
-            menuPanel.AddComponent<GraphicRaycaster>();
-            
-            Canvas canvas = menuPanel.GetComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 1000;
-            
-            RectTransform rectTransform = menuPanel.GetComponent<RectTransform>();
-            rectTransform.anchorMin = Vector2.zero;
-            rectTransform.anchorMax = Vector2.one;
-            rectTransform.sizeDelta = Vector2.zero;
-            
-            CreateMenuContent();
-            
-            menuPanel.SetActive(false);
-        }
-        
-        private static void CreateMenuContent()
-        {
-            GameObject background = new GameObject("Background");
-            background.transform.SetParent(menuPanel.transform);
-            Image bgImage = background.AddComponent<Image>();
-            bgImage.color = new Color(0.1f, 0.1f, 0.2f, 0.95f);
-            
-            RectTransform bgRect = background.GetComponent<RectTransform>();
-            bgRect.anchorMin = new Vector2(0.25f, 0.15f);
-            bgRect.anchorMax = new Vector2(0.75f, 0.85f);
-            bgRect.sizeDelta = Vector2.zero;
-            
-            GameObject titleTextObj = new GameObject("TitleText");
-            titleTextObj.transform.SetParent(menuPanel.transform);
-            TextMeshProUGUI titleText = titleTextObj.AddComponent<TextMeshProUGUI>();
-            titleText.text = "RITUAL OFFERING";
-            titleText.fontSize = 48;
-            titleText.fontStyle = FontStyles.Bold;
-            titleText.color = new Color(0.9f, 0.8f, 0.5f);
-            titleText.alignment = TextAlignmentOptions.Center;
-            
-            RectTransform titleRect = titleTextObj.GetComponent<RectTransform>();
-            titleRect.anchorMin = new Vector2(0.3f, 0.75f);
-            titleRect.anchorMax = new Vector2(0.7f, 0.85f);
-            titleRect.sizeDelta = Vector2.zero;
-            
-            GameObject shardsTextObj = new GameObject("ShardsText");
-            shardsTextObj.transform.SetParent(menuPanel.transform);
-            TextMeshProUGUI shardsText = shardsTextObj.AddComponent<TextMeshProUGUI>();
-            shardsText.text = "Available Shards: 0";
-            shardsText.fontSize = 32;
-            shardsText.color = Color.cyan;
-            shardsText.alignment = TextAlignmentOptions.Center;
-            
-            RectTransform shardsRect = shardsTextObj.GetComponent<RectTransform>();
-            shardsRect.anchorMin = new Vector2(0.3f, 0.68f);
-            shardsRect.anchorMax = new Vector2(0.7f, 0.74f);
-            shardsRect.sizeDelta = Vector2.zero;
-            
-            CreateOfferingButton(1, "Entity Offering", "1/5/10 shards\nRandom/Common/Rare Item", new Vector2(0.28f, 0.55f), new Vector2(0.42f, 0.66f), OnEntityOffering);
-            CreateOfferingButton(2, "Ego Offering", "1/5/10 shards\n1-3/4-6/7-10 Egocentrism", new Vector2(0.58f, 0.55f), new Vector2(0.72f, 0.66f), OnEgoOffering);
-            CreateOfferingButton(3, "Blessing Offering", "Based on shards\nStat bonuses", new Vector2(0.28f, 0.43f), new Vector2(0.42f, 0.54f), OnBlessingOffering);
-            CreateOfferingButton(4, "Lightness Offering", "1/5/10 shards\n1/2-4/5-10 Hopoo Feathers", new Vector2(0.58f, 0.43f), new Vector2(0.72f, 0.54f), OnLightnessOffering);
-            CreateOfferingButton(5, "Heresy Offering", "10 shards\nHeretic Unlock Items", new Vector2(0.28f, 0.31f), new Vector2(0.42f, 0.42f), OnHeresyOffering);
-            CreateOfferingButton(6, "Submission Offering", "10 shards\nHappiest Mask", new Vector2(0.58f, 0.31f), new Vector2(0.72f, 0.42f), OnSubmissionOffering);
-            CreateOfferingButton(7, "Greed Offering", "1/5/10 shards\n100-200/500-1000/1000-5000 Gold", new Vector2(0.38f, 0.19f), new Vector2(0.62f, 0.30f), OnGreedOffering);
-        }
-        
-        private static void CreateOfferingButton(int id, string title, string description, Vector2 anchorMin, Vector2 anchorMax, Action onClick)
-        {
-            GameObject buttonObj = new GameObject($"OfferingButton_{id}");
-            buttonObj.transform.SetParent(menuPanel.transform);
-            
-            Button button = buttonObj.AddComponent<Button>();
-            button.onClick.AddListener(() => OnOfferingClick(id, onClick));
-            
-            Image buttonImage = buttonObj.AddComponent<Image>();
-            buttonImage.color = new Color(0.2f, 0.15f, 0.3f, 0.9f);
-            buttonImage.type = Image.Type.RoundedRectangle;
-            
-            RectTransform buttonRect = buttonObj.GetComponent<RectTransform>();
-            buttonRect.anchorMin = anchorMin;
-            buttonRect.anchorMax = anchorMax;
-            buttonRect.sizeDelta = Vector2.zero;
-            
-            GameObject titleTextObj = new GameObject($"Title_{id}");
-            titleTextObj.transform.SetParent(buttonObj.transform);
-            TextMeshProUGUI titleText = titleTextObj.AddComponent<TextMeshProUGUI>();
-            titleText.text = title;
-            titleText.fontSize = 18;
-            titleText.fontStyle = FontStyles.Bold;
-            titleText.color = Color.white;
-            titleText.alignment = TextAlignmentOptions.Center;
-            
-            RectTransform titleRect = titleTextObj.GetComponent<RectTransform>();
-            titleRect.anchorMin = new Vector2(0.1f, 0.6f);
-            titleRect.anchorMax = new Vector2(0.9f, 0.9f);
-            titleRect.sizeDelta = Vector2.zero;
-            
-            GameObject descTextObj = new GameObject($"Description_{id}");
-            descTextObj.transform.SetParent(buttonObj.transform);
-            TextMeshProUGUI descText = descTextObj.AddComponent<TextMeshProUGUI>();
-            descText.text = description;
-            descText.fontSize = 12;
-            descText.color = new Color(0.8f, 0.8f, 0.8f);
-            descText.alignment = TextAlignmentOptions.Center;
-            
-            RectTransform descRect = descTextObj.GetComponent<RectTransform>();
-            descRect.anchorMin = new Vector2(0.1f, 0.1f);
-            descRect.anchorMax = new Vector2(0.9f, 0.55f);
-            descRect.sizeDelta = Vector2.zero;
-        }
-        
-        private static void OnRunStart(Run run)
-        {
-            menuOpened = false;
-            optionSelected = false;
-            playerOfferings.Clear();
-            OpenMenu();
-        }
-        
-        private static void OpenMenu()
-        {
-            if (menuOpened || optionSelected) return;
-            
-            UpdateShardsDisplay();
-            menuPanel.SetActive(true);
-            menuOpened = true;
-            
-            PauseGame();
-        }
-        
-        private static void UpdateShardsDisplay()
-        {
-            ulong localSteamId = GetLocalPlayerSteamId();
-            int shards = GenesisShards.GetShards(localSteamId);
-            
-            Transform shardsText = menuPanel.transform.Find("ShardsText");
-            if (shardsText != null)
-            {
-                TextMeshProUGUI text = shardsText.GetComponent<TextMeshProUGUI>();
-                text.text = $"Available Shards: {shards}";
-            }
-        }
-        
-        private static void OnOfferingClick(int offeringId, Action onExecute)
-        {
-            ulong localSteamId = GetLocalPlayerSteamId();
-            int shards = GenesisShards.GetShards(localSteamId);
-            
-            if (shards <= 0)
-            {
-                Log.LogWarning("Not enough shards!");
-                return;
-            }
-            
-            if (optionSelected)
-            {
-                Log.LogWarning("Offering already selected!");
-                return;
-            }
-            
-            optionSelected = true;
-            playerOfferings[localSteamId] = offeringId;
-            
-            onExecute?.Invoke();
-            
-            CloseMenu();
-        }
-        
-        private static void OnEntityOffering()
-        {
-            ulong localSteamId = GetLocalPlayerSteamId();
-            int shards = GenesisShards.GetShards(localSteamId);
-            
-            int tier = shards >= 10 ? 2 : (shards >= 5 ? 1 : 0);
-            int cost = tier == 2 ? 10 : (tier == 1 ? 5 : 1);
-            
-            GenesisShards.RemoveShards(localSteamId, cost);
-            GiveRandomItem(tier);
-            
-            Log.LogInfo($"Entity Offering: {cost} shards spent, Tier {tier} item granted");
-        }
-        
-        private static void OnEgoOffering()
-        {
-            ulong localSteamId = GetLocalPlayerSteamId();
-            int shards = GenesisShards.GetShards(localSteamId);
-            
-            int tier = shards >= 10 ? 2 : (shards >= 5 ? 1 : 0);
-            int cost = tier == 2 ? 10 : (tier == 1 ? 5 : 1);
-            int stacks = tier == 2 ? UnityEngine.Random.Range(7, 11) : (tier == 1 ? UnityEngine.Random.Range(4, 7) : UnityEngine.Random.Range(1, 4));
-            
-            GenesisShards.RemoveShards(localSteamId, cost);
-            GiveEgocentrismStacks(stacks);
-            
-            Log.LogInfo($"Ego Offering: {cost} shards spent, {stacks} Egocentrism stacks granted");
-        }
-        
-        private static void OnBlessingOffering()
-        {
-            ulong localSteamId = GetLocalPlayerSteamId();
-            int shards = GenesisShards.GetShards(localSteamId);
-            
-            GenesisShards.RemoveShards(localSteamId, shards);
-            ApplyStatBonuses(shards);
-            
-            Log.LogInfo($"Blessing Offering: {shards} shards spent, stat bonuses applied");
-        }
-        
-        private static void OnLightnessOffering()
-        {
-            ulong localSteamId = GetLocalPlayerSteamId();
-            int shards = GenesisShards.GetShards(localSteamId);
-            
-            int tier = shards >= 10 ? 2 : (shards >= 5 ? 1 : 0);
-            int cost = tier == 2 ? 10 : (tier == 1 ? 5 : 1);
-            int stacks = tier == 2 ? UnityEngine.Random.Range(5, 11) : (tier == 1 ? UnityEngine.Random.Range(2, 5) : 1);
-            
-            GenesisShards.RemoveShards(localSteamId, cost);
-            GiveHopooFeatherStacks(stacks);
-            
-            Log.LogInfo($"Lightness Offering: {cost} shards spent, {stacks} Hopoo Feathers granted");
-        }
-        
-        private static void OnHeresyOffering()
-        {
-            ulong localSteamId = GetLocalPlayerSteamId();
-            int shards = GenesisShards.GetShards(localSteamId);
-            
-            if (shards < 10)
-            {
-                Log.LogWarning("Not enough shards for Heresy Offering!");
-                return;
-            }
-            
-            GenesisShards.RemoveShards(localSteamId, 10);
-            GiveHereticItems();
-            
-            Log.LogInfo("Heresy Offering: 10 shards spent, Heretic items granted");
-        }
-        
-        private static void OnSubmissionOffering()
-        {
-            ulong localSteamId = GetLocalPlayerSteamId();
-            int shards = GenesisShards.GetShards(localSteamId);
-            
-            if (shards < 10)
-            {
-                Log.LogWarning("Not enough shards for Submission Offering!");
-                return;
-            }
-            
-            GenesisShards.RemoveShards(localSteamId, 10);
-            GiveHappiestMask();
-            
-            Log.LogInfo("Submission Offering: 10 shards spent, Happiest Mask granted");
-        }
-        
-        private static void OnGreedOffering()
-        {
-            ulong localSteamId = GetLocalPlayerSteamId();
-            int shards = GenesisShards.GetShards(localSteamId);
-            
-            int tier = shards >= 10 ? 2 : (shards >= 5 ? 1 : 0);
-            int cost = tier == 2 ? 10 : (tier == 1 ? 5 : 1);
-            int gold = tier == 2 ? UnityEngine.Random.Range(1000, 5001) : (tier == 1 ? UnityEngine.Random.Range(500, 1001) : UnityEngine.Random.Range(100, 201));
-            
-            GenesisShards.RemoveShards(localSteamId, cost);
-            GiveGold(gold);
-            
-            Log.LogInfo($"Greed Offering: {cost} shards spent, {gold} gold granted");
-        }
-        
-        private static void GiveRandomItem(int tier)
-        {
-            if (!NetworkServer.active) return;
-            
-            var pickupList = tier switch
-            {
-                0 => Run.instance.availableTier1DropList,
-                1 => Run.instance.availableTier2DropList,
-                2 => Run.instance.availableTier3DropList,
-                _ => Run.instance.availableTier1DropList
-            };
-            
-            if (pickupList != null && pickupList.Count > 0)
-            {
-                PickupIndex pickup = pickupList[UnityEngine.Random.Range(0, pickupList.Count)];
-                PlayerCharacterMasterController localPlayer = PlayerCharacterMasterController.instances[0];
-                if (localPlayer != null && localPlayer.master.inventory != null)
-                {
-                    PickupDropletController.CreatePickupDroplet(pickup, localPlayer.master.GetBody().transform.position, Vector3.up * 10f);
-                }
-            }
-        }
-        
-        private static void GiveEgocentrismStacks(int stacks)
-        {
-            if (!NetworkServer.active) return;
-            
-            PlayerCharacterMasterController localPlayer = PlayerCharacterMasterController.instances[0];
-            if (localPlayer != null && localPlayer.master.inventory != null)
-            {
-                ItemIndex egocentrismIndex = RoR2Content.Items.AttackSpeedOnCrit.itemIndex;
-                localPlayer.master.inventory.GiveItem(egocentrismIndex, stacks);
-            }
-        }
-        
-        private static void ApplyStatBonuses(int shards)
-        {
-            if (!NetworkServer.active) return;
-            
-            PlayerCharacterMasterController localPlayer = PlayerCharacterMasterController.instances[0];
-            if (localPlayer != null)
-            {
-                float damageBonus = shards * 0.02f;
-                float healthBonus = shards * 0.01f;
-                
-                localPlayer.master.GetBody().baseDamage *= (1f + damageBonus);
-                localPlayer.master.GetBody().baseMaxHealth *= (1f + healthBonus);
-            }
-        }
-        
-        private static void GiveHopooFeatherStacks(int stacks)
-        {
-            if (!NetworkServer.active) return;
-            
-            PlayerCharacterMasterController localPlayer = PlayerCharacterMasterController.instances[0];
-            if (localPlayer != null && localPlayer.master.inventory != null)
-            {
-                ItemIndex featherIndex = RoR2Content.Items.JumpBoost.itemIndex;
-                localPlayer.master.inventory.GiveItem(featherIndex, stacks);
-            }
-        }
-        
-        private static void GiveHereticItems()
-        {
-            if (!NetworkServer.active) return;
-            
-            PlayerCharacterMasterController localPlayer = PlayerCharacterMasterController.instances[0];
-            if (localPlayer != null && localPlayer.master.inventory != null)
-            {
-                ItemIndex[] hereticItems = 
-                {
-                    RoR2Content.Items.BoostAttackSpeedAndMoveSpeed.itemIndex,
-                    RoR2Content.Items.AutoCastEquipment.itemIndex,
-                    RoR2Content.Items.ChainLightning.itemIndex,
-                    RoR2Content.Items.BleedOnHitAndExplode.itemIndex
-                };
-                
-                foreach (ItemIndex itemIndex in hereticItems)
-                {
-                    localPlayer.master.inventory.GiveItem(itemIndex, 1);
-                }
-            }
-        }
-        
-        private static void GiveHappiestMask()
-        {
-            if (!NetworkServer.active) return;
-            
-            PlayerCharacterMasterController localPlayer = PlayerCharacterMasterController.instances[0];
-            if (localPlayer != null && localPlayer.master.inventory != null)
-            {
-                ItemIndex maskIndex = RoR2Content.Items.GhostOnKill.itemIndex;
-                localPlayer.master.inventory.GiveItem(maskIndex, 1);
-            }
-        }
-        
-        private static void GiveGold(int amount)
-        {
-            if (!NetworkServer.active) return;
-            
-            PlayerCharacterMasterController localPlayer = PlayerCharacterMasterController.instances[0];
-            if (localPlayer != null)
-            {
-                localPlayer.master.GiveMoney((uint)amount);
-            }
-        }
-        
-        private static void CloseMenu()
-        {
-            menuPanel.SetActive(false);
-            ResumeGame();
-        }
-        
-        private static void PauseGame()
-        {
-            Time.timeScale = 0f;
-        }
-        
-        private static void ResumeGame()
-        {
-            Time.timeScale = 1f;
-        }
-        
-        private static ulong GetLocalPlayerSteamId()
-        {
-            if (NetworkUser.readOnlyLocalPlayersList.Count > 0)
-            {
-                return NetworkUser.readOnlyLocalPlayersList[0].id.value;
-            }
-            return 0;
-        }
-        */
-    }
+	public static class RitualMenu
+	{
+		private static bool initialized;
+		private static bool shownThisRun;
+		private static readonly HashSet<ulong> serverConsumedThisRun = new HashSet<ulong>();
+
+		private static GameObject uiRoot;
+		private static GameObject bootstrapObj;
+		private static StageStartBootstrap bootstrap;
+		private static HGTextMeshProUGUI shardsText;
+		private static HGTextMeshProUGUI ritualTitleText;
+		private static HGTextMeshProUGUI ritualDescText;
+		private static Button smallBtn;
+		private static Button mediumBtn;
+		private static Button grandBtn;
+		private static Canvas canvas;
+
+		private static readonly int SmallCost = 1;
+		private static readonly int MediumCost = 5;
+		private static readonly int GrandCost = 10;
+
+		private static ExplicitPickupDropTable tier1DropTable;
+		private static ExplicitPickupDropTable tier2DropTable;
+		private static ExplicitPickupDropTable tier3DropTable;
+
+		private static RitualType selectedRitual = RitualType.Essence;
+
+		public static void Initialize()
+		{
+			if (initialized) return;
+			initialized = true;
+
+			NetworkingAPI.RegisterMessageType<RitualOfEssenceRequest>();
+			NetworkingAPI.RegisterMessageType<RitualOfEgoRequest>();
+			Log.Info("[LunarRitual] RitualMenu initialized + message registered");
+
+			EnsureBootstrap();
+
+			Run.onRunStartGlobal += OnRunStart;
+			Run.onRunDestroyGlobal += OnRunDestroy;
+			Stage.onStageStartGlobal += OnStageStartGlobal;
+		}
+
+		private static void OnRunStart(Run run)
+		{
+			shownThisRun = false;
+			if (NetworkServer.active)
+			{
+				serverConsumedThisRun.Clear();
+			}
+		}
+
+		private static void OnRunDestroy(Run run)
+		{
+			shownThisRun = false;
+			if (NetworkServer.active)
+			{
+				serverConsumedThisRun.Clear();
+			}
+			DestroyUI();
+		}
+
+		private static void OnStageStartGlobal(Stage stage)
+		{
+			if (shownThisRun) return;
+			if (Run.instance == null) return;
+			if (Run.instance.stageClearCount != 0) return; // only once per run, on first stage
+
+			EnsureBootstrap();
+			bootstrap.BeginTryShow();
+		}
+
+		private static void EnsureBootstrap()
+		{
+			if (bootstrap != null) return;
+			if (bootstrapObj != null)
+			{
+				bootstrap = bootstrapObj.GetComponent<StageStartBootstrap>();
+				if (bootstrap != null) return;
+			}
+
+			bootstrapObj = new GameObject("LunarRitual_RitualMenuBootstrap");
+			UnityEngine.Object.DontDestroyOnLoad(bootstrapObj);
+			bootstrap = bootstrapObj.AddComponent<StageStartBootstrap>();
+		}
+
+		private static void CreateAndShowIfNeeded()
+		{
+			if (shownThisRun) return;
+			if (NetworkUser.readOnlyLocalPlayersList == null || NetworkUser.readOnlyLocalPlayersList.Count <= 0) return;
+
+			var user = NetworkUser.readOnlyLocalPlayersList[0];
+			if (user == null) return;
+			if (!user.master) return;
+			if (user.master.GetBody() == null) return; // wait until the run is actually playable
+
+			shownThisRun = true;
+			CreateUI();
+			RefreshShardsText();
+		}
+
+		private class StageStartBootstrap : MonoBehaviour
+		{
+			private float remaining;
+
+			public void BeginTryShow()
+			{
+				// try for a few seconds, to survive load hiccups / late spawning
+				remaining = 8f;
+				enabled = true;
+			}
+
+			private void Awake()
+			{
+				enabled = false;
+			}
+
+			private void Update()
+			{
+				if (shownThisRun)
+				{
+					enabled = false;
+					return;
+				}
+
+				remaining -= Time.unscaledDeltaTime;
+				if (remaining <= 0f)
+				{
+					enabled = false;
+					return;
+				}
+
+				CreateAndShowIfNeeded();
+			}
+		}
+
+		private static void CreateUI()
+		{
+			if (uiRoot != null) return;
+
+			GameObject canvasObj = new GameObject("LunarRitual_RitualMenuCanvas");
+			canvas = canvasObj.AddComponent<Canvas>();
+			canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+			canvas.sortingOrder = 200;
+			canvasObj.AddComponent<CanvasScaler>();
+			canvasObj.AddComponent<GraphicRaycaster>();
+
+			uiRoot = canvasObj;
+
+			var bg = new GameObject("Background");
+			bg.transform.SetParent(uiRoot.transform, false);
+			var bgImage = bg.AddComponent<Image>();
+			bgImage.color = new Color(0f, 0f, 0f, 0.55f);
+			var bgRect = bg.GetComponent<RectTransform>();
+			bgRect.anchorMin = new Vector2(0f, 0f);
+			bgRect.anchorMax = new Vector2(1f, 1f);
+			bgRect.offsetMin = Vector2.zero;
+			bgRect.offsetMax = Vector2.zero;
+
+			var panel = new GameObject("Panel");
+			panel.transform.SetParent(bg.transform, false);
+			var panelImage = panel.AddComponent<Image>();
+			panelImage.color = new Color(0.08f, 0.05f, 0.12f, 0.95f);
+			var panelRect = panel.GetComponent<RectTransform>();
+			panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+			panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+			panelRect.pivot = new Vector2(0.5f, 0.5f);
+			panelRect.sizeDelta = new Vector2(680f, 360f);
+			panelRect.anchoredPosition = Vector2.zero;
+
+			var titleObj = new GameObject("Title");
+			titleObj.transform.SetParent(panel.transform, false);
+			var title = titleObj.AddComponent<HGTextMeshProUGUI>();
+			title.fontSize = 34;
+			title.color = new Color(0.92f, 0.85f, 1f, 1f);
+			title.fontStyle = TMPro.FontStyles.Bold;
+			title.alignment = TMPro.TextAlignmentOptions.Left;
+			title.text = "Lunar Ritual";
+			if (title.font == null)
+			{
+				title.font = Resources.Load<TMPro.TMP_FontAsset>("fonts & materials/LiberationSans SDF");
+			}
+			var titleRect = titleObj.GetComponent<RectTransform>();
+			titleRect.anchorMin = new Vector2(0f, 1f);
+			titleRect.anchorMax = new Vector2(1f, 1f);
+			titleRect.pivot = new Vector2(0.5f, 1f);
+			titleRect.sizeDelta = new Vector2(-40f, 48f);
+			titleRect.anchoredPosition = new Vector2(0f, -16f);
+
+			var shardsObj = new GameObject("ShardsText");
+			shardsObj.transform.SetParent(panel.transform, false);
+			shardsText = shardsObj.AddComponent<HGTextMeshProUGUI>();
+			shardsText.fontSize = 22;
+			shardsText.color = new Color(1f, 0.55f, 0.55f, 1f);
+			shardsText.fontStyle = TMPro.FontStyles.Bold;
+			shardsText.alignment = TMPro.TextAlignmentOptions.Left;
+			shardsText.text = "Genesis Shards: ?";
+			if (shardsText.font == null)
+			{
+				shardsText.font = Resources.Load<TMPro.TMP_FontAsset>("fonts & materials/LiberationSans SDF");
+			}
+			var shardsRect = shardsObj.GetComponent<RectTransform>();
+			shardsRect.anchorMin = new Vector2(0f, 1f);
+			shardsRect.anchorMax = new Vector2(1f, 1f);
+			shardsRect.pivot = new Vector2(0.5f, 1f);
+			shardsRect.sizeDelta = new Vector2(-40f, 36f);
+			shardsRect.anchoredPosition = new Vector2(0f, -64f);
+
+			// Ritual selector row
+			var ritualTabs = new GameObject("RitualTabs");
+			ritualTabs.transform.SetParent(panel.transform, false);
+			var tabsRect = ritualTabs.AddComponent<RectTransform>();
+			tabsRect.anchorMin = new Vector2(0.5f, 1f);
+			tabsRect.anchorMax = new Vector2(0.5f, 1f);
+			tabsRect.pivot = new Vector2(0.5f, 1f);
+			tabsRect.sizeDelta = new Vector2(640f, 48f);
+			tabsRect.anchoredPosition = new Vector2(0f, -96f);
+
+			CreateTabButton(ritualTabs.transform, "Essence", new Vector2(-110f, 0f), () => SelectRitual(RitualType.Essence));
+			CreateTabButton(ritualTabs.transform, "Ego", new Vector2(110f, 0f), () => SelectRitual(RitualType.Ego));
+
+			var ritualTitleObj = new GameObject("RitualTitle");
+			ritualTitleObj.transform.SetParent(panel.transform, false);
+			ritualTitleText = ritualTitleObj.AddComponent<HGTextMeshProUGUI>();
+			ritualTitleText.fontSize = 26;
+			ritualTitleText.color = Color.white;
+			ritualTitleText.fontStyle = TMPro.FontStyles.Bold;
+			ritualTitleText.alignment = TMPro.TextAlignmentOptions.Left;
+			if (ritualTitleText.font == null)
+			{
+				ritualTitleText.font = Resources.Load<TMPro.TMP_FontAsset>("fonts & materials/LiberationSans SDF");
+			}
+			var ritualTitleRect = ritualTitleObj.GetComponent<RectTransform>();
+			ritualTitleRect.anchorMin = new Vector2(0f, 1f);
+			ritualTitleRect.anchorMax = new Vector2(1f, 1f);
+			ritualTitleRect.pivot = new Vector2(0.5f, 1f);
+			ritualTitleRect.sizeDelta = new Vector2(-40f, 36f);
+			ritualTitleRect.anchoredPosition = new Vector2(0f, -152f);
+
+			var ritualDescObj = new GameObject("RitualDesc");
+			ritualDescObj.transform.SetParent(panel.transform, false);
+			ritualDescText = ritualDescObj.AddComponent<HGTextMeshProUGUI>();
+			ritualDescText.fontSize = 18;
+			ritualDescText.color = new Color(0.9f, 0.9f, 0.95f, 1f);
+			ritualDescText.alignment = TMPro.TextAlignmentOptions.Left;
+			if (ritualDescText.font == null)
+			{
+				ritualDescText.font = Resources.Load<TMPro.TMP_FontAsset>("fonts & materials/LiberationSans SDF");
+			}
+			var ritualDescRect = ritualDescObj.GetComponent<RectTransform>();
+			ritualDescRect.anchorMin = new Vector2(0f, 1f);
+			ritualDescRect.anchorMax = new Vector2(1f, 1f);
+			ritualDescRect.pivot = new Vector2(0.5f, 1f);
+			ritualDescRect.sizeDelta = new Vector2(-40f, 70f);
+			ritualDescRect.anchoredPosition = new Vector2(0f, -188f);
+
+			var buttonsRow = new GameObject("ButtonsRow");
+			buttonsRow.transform.SetParent(panel.transform, false);
+			var rowRect = buttonsRow.AddComponent<RectTransform>();
+			rowRect.anchorMin = new Vector2(0.5f, 0f);
+			rowRect.anchorMax = new Vector2(0.5f, 0f);
+			rowRect.pivot = new Vector2(0.5f, 0f);
+			rowRect.sizeDelta = new Vector2(640f, 70f);
+			rowRect.anchoredPosition = new Vector2(0f, 72f);
+
+			smallBtn = CreateOfferButton(buttonsRow.transform, "Small Offering (1)", new Vector2(-210f, 0f), () => RequestSelectedRitual(OfferingTier.Small));
+			mediumBtn = CreateOfferButton(buttonsRow.transform, "Medium Offering (5)", new Vector2(0f, 0f), () => RequestSelectedRitual(OfferingTier.Medium));
+			grandBtn = CreateOfferButton(buttonsRow.transform, "Grand Offering (10)", new Vector2(210f, 0f), () => RequestSelectedRitual(OfferingTier.Grand));
+
+			CreateCloseButton(panel.transform);
+
+			SelectRitual(RitualType.Essence);
+		}
+
+		private static Button CreateOfferButton(Transform parent, string label, Vector2 anchoredPos, Action onClick)
+		{
+			var btnObj = new GameObject(label.Replace(" ", "_"));
+			btnObj.transform.SetParent(parent, false);
+
+			var img = btnObj.AddComponent<Image>();
+			img.color = new Color(0.18f, 0.12f, 0.28f, 1f);
+
+			var btn = btnObj.AddComponent<Button>();
+			btn.onClick.AddListener(() => onClick?.Invoke());
+
+			var rect = btnObj.GetComponent<RectTransform>();
+			rect.anchorMin = new Vector2(0.5f, 0.5f);
+			rect.anchorMax = new Vector2(0.5f, 0.5f);
+			rect.pivot = new Vector2(0.5f, 0.5f);
+			rect.sizeDelta = new Vector2(200f, 56f);
+			rect.anchoredPosition = anchoredPos;
+
+			var textObj = new GameObject("Text");
+			textObj.transform.SetParent(btnObj.transform, false);
+			var text = textObj.AddComponent<HGTextMeshProUGUI>();
+			text.fontSize = 18;
+			text.color = Color.white;
+			text.fontStyle = TMPro.FontStyles.Bold;
+			text.alignment = TMPro.TextAlignmentOptions.Center;
+			text.text = label;
+			if (text.font == null)
+			{
+				text.font = Resources.Load<TMPro.TMP_FontAsset>("fonts & materials/LiberationSans SDF");
+			}
+			var textRect = textObj.GetComponent<RectTransform>();
+			textRect.anchorMin = new Vector2(0f, 0f);
+			textRect.anchorMax = new Vector2(1f, 1f);
+			textRect.offsetMin = Vector2.zero;
+			textRect.offsetMax = Vector2.zero;
+
+			return btn;
+		}
+
+		private static void CreateCloseButton(Transform panel)
+		{
+			var closeObj = new GameObject("CloseButton");
+			closeObj.transform.SetParent(panel, false);
+			var img = closeObj.AddComponent<Image>();
+			img.color = new Color(0.12f, 0.12f, 0.12f, 1f);
+
+			var btn = closeObj.AddComponent<Button>();
+			btn.onClick.AddListener(Close);
+
+			var rect = closeObj.GetComponent<RectTransform>();
+			rect.anchorMin = new Vector2(1f, 1f);
+			rect.anchorMax = new Vector2(1f, 1f);
+			rect.pivot = new Vector2(1f, 1f);
+			rect.sizeDelta = new Vector2(110f, 40f);
+			rect.anchoredPosition = new Vector2(-16f, -16f);
+
+			var textObj = new GameObject("Text");
+			textObj.transform.SetParent(closeObj.transform, false);
+			var text = textObj.AddComponent<HGTextMeshProUGUI>();
+			text.fontSize = 18;
+			text.color = Color.white;
+			text.fontStyle = TMPro.FontStyles.Bold;
+			text.alignment = TMPro.TextAlignmentOptions.Center;
+			text.text = "Close";
+			if (text.font == null)
+			{
+				text.font = Resources.Load<TMPro.TMP_FontAsset>("fonts & materials/LiberationSans SDF");
+			}
+			var textRect = textObj.GetComponent<RectTransform>();
+			textRect.anchorMin = new Vector2(0f, 0f);
+			textRect.anchorMax = new Vector2(1f, 1f);
+			textRect.offsetMin = Vector2.zero;
+			textRect.offsetMax = Vector2.zero;
+		}
+
+		private static void CreateTabButton(Transform parent, string label, Vector2 anchoredPos, Action onClick)
+		{
+			var btnObj = new GameObject($"Tab_{label}");
+			btnObj.transform.SetParent(parent, false);
+
+			var img = btnObj.AddComponent<Image>();
+			img.color = new Color(0.12f, 0.08f, 0.18f, 1f);
+
+			var btn = btnObj.AddComponent<Button>();
+			btn.onClick.AddListener(() => onClick?.Invoke());
+
+			var rect = btnObj.GetComponent<RectTransform>();
+			rect.anchorMin = new Vector2(0.5f, 0.5f);
+			rect.anchorMax = new Vector2(0.5f, 0.5f);
+			rect.pivot = new Vector2(0.5f, 0.5f);
+			rect.sizeDelta = new Vector2(200f, 40f);
+			rect.anchoredPosition = anchoredPos;
+
+			var textObj = new GameObject("Text");
+			textObj.transform.SetParent(btnObj.transform, false);
+			var text = textObj.AddComponent<HGTextMeshProUGUI>();
+			text.fontSize = 18;
+			text.color = Color.white;
+			text.fontStyle = TMPro.FontStyles.Bold;
+			text.alignment = TMPro.TextAlignmentOptions.Center;
+			text.text = label;
+			if (text.font == null)
+			{
+				text.font = Resources.Load<TMPro.TMP_FontAsset>("fonts & materials/LiberationSans SDF");
+			}
+			var textRect = textObj.GetComponent<RectTransform>();
+			textRect.anchorMin = new Vector2(0f, 0f);
+			textRect.anchorMax = new Vector2(1f, 1f);
+			textRect.offsetMin = Vector2.zero;
+			textRect.offsetMax = Vector2.zero;
+		}
+
+		private static void SelectRitual(RitualType ritual)
+		{
+			selectedRitual = ritual;
+			if (ritualTitleText == null || ritualDescText == null) return;
+
+			switch (selectedRitual)
+			{
+				case RitualType.Essence:
+					ritualTitleText.text = "Ritual of Essence";
+					ritualDescText.text = "Receive a random item.\n1: Common • 5: Uncommon • 10: Legendary";
+					SetOfferingButtonsActive(true, true, true);
+					break;
+				case RitualType.Ego:
+					ritualTitleText.text = "Ritual of Ego";
+					ritualDescText.text = "Gain stacks of Egocentrism (LunarSun).\n1: 1–3 • 5: 4–6 • 10: 7–10";
+					SetOfferingButtonsActive(true, true, true);
+					break;
+			}
+		}
+
+		private static void SetOfferingButtonsActive(bool small, bool medium, bool grand)
+		{
+			if (smallBtn) smallBtn.interactable = small;
+			if (mediumBtn) mediumBtn.interactable = medium;
+			if (grandBtn) grandBtn.interactable = grand;
+		}
+
+		private static void RequestSelectedRitual(OfferingTier tier)
+		{
+			switch (selectedRitual)
+			{
+				case RitualType.Essence:
+					RequestEssence(tier);
+					break;
+				case RitualType.Ego:
+					RequestEgo(tier);
+					break;
+			}
+		}
+
+		private static void RequestEssence(OfferingTier tier)
+		{
+			Log.Info($"[LunarRitual] Ritual of Essence clicked: {tier}. NetworkServer.active={NetworkServer.active}");
+			RefreshShardsText();
+
+			if (NetworkUser.readOnlyLocalPlayersList == null || NetworkUser.readOnlyLocalPlayersList.Count <= 0)
+			{
+				Log.Warning("[LunarRitual] Ritual click ignored: no local players");
+				return;
+			}
+			var user = NetworkUser.readOnlyLocalPlayersList[0];
+			if (user == null)
+			{
+				Log.Warning("[LunarRitual] Ritual click ignored: local user is null");
+				return;
+			}
+
+			Log.Info($"[LunarRitual] Ritual click: local steamId={user.id.value}, netId={user.netId}");
+
+			var msg = new RitualOfEssenceRequest
+			{
+				networkUserNetId = user.netId,
+				tier = tier
+			};
+
+			if (NetworkServer.active)
+			{
+				Log.Info("[LunarRitual] Handling ritual locally (host)");
+				msg.OnReceived();
+			}
+			else
+			{
+				Log.Info("[LunarRitual] Sending ritual request to server");
+				msg.Send(NetworkDestination.Server);
+			}
+
+			InvokeDelayed(0.15f, RefreshShardsText);
+			Close();
+		}
+
+		private static void RequestEgo(OfferingTier tier)
+		{
+			Log.Info($"[LunarRitual] Ritual of Ego clicked: {tier}. NetworkServer.active={NetworkServer.active}");
+			RefreshShardsText();
+
+			if (NetworkUser.readOnlyLocalPlayersList == null || NetworkUser.readOnlyLocalPlayersList.Count <= 0)
+			{
+				Log.Warning("[LunarRitual] Ritual click ignored: no local players");
+				return;
+			}
+			var user = NetworkUser.readOnlyLocalPlayersList[0];
+			if (user == null)
+			{
+				Log.Warning("[LunarRitual] Ritual click ignored: local user is null");
+				return;
+			}
+
+			Log.Info($"[LunarRitual] Ritual click: local steamId={user.id.value}, netId={user.netId}");
+
+			var msg = new RitualOfEgoRequest
+			{
+				networkUserNetId = user.netId,
+				tier = tier
+			};
+
+			if (NetworkServer.active)
+			{
+				Log.Info("[LunarRitual] Handling ritual locally (host)");
+				msg.OnReceived();
+			}
+			else
+			{
+				Log.Info("[LunarRitual] Sending ritual request to server");
+				msg.Send(NetworkDestination.Server);
+			}
+
+			InvokeDelayed(0.15f, RefreshShardsText);
+			Close();
+		}
+
+		private static void RefreshShardsText()
+		{
+			if (shardsText == null) return;
+			if (NetworkUser.readOnlyLocalPlayersList == null || NetworkUser.readOnlyLocalPlayersList.Count <= 0) return;
+			var user = NetworkUser.readOnlyLocalPlayersList[0];
+			if (user == null) return;
+			ulong steamId = user.id.value;
+			shardsText.text = $"Genesis Shards: {GenesisShards.GetShards(steamId)}";
+		}
+
+		private static void Close()
+		{
+			DestroyUI();
+		}
+
+		private static void DestroyUI()
+		{
+			if (uiRoot != null)
+			{
+				UnityEngine.Object.Destroy(uiRoot);
+				uiRoot = null;
+				shardsText = null;
+			}
+
+			if (canvas != null)
+			{
+				UnityEngine.Object.Destroy(canvas.gameObject);
+				canvas = null;
+			}
+		}
+
+		private static void InvokeDelayed(float delay, Action action)
+		{
+			if (!uiRoot) return;
+			uiRoot.AddComponent<DelayedInvoker>().Init(delay, action);
+		}
+
+		private class DelayedInvoker : MonoBehaviour
+		{
+			private float t;
+			private Action action;
+
+			public void Init(float delay, Action action)
+			{
+				t = delay;
+				this.action = action;
+			}
+
+			private void Update()
+			{
+				t -= Time.unscaledDeltaTime;
+				if (t > 0f) return;
+				try { action?.Invoke(); }
+				finally { Destroy(this); }
+			}
+		}
+
+		private enum OfferingTier : byte
+		{
+			Small = 0,
+			Medium = 1,
+			Grand = 2
+		}
+
+		private struct RitualOfEssenceRequest : INetMessage
+		{
+			public NetworkInstanceId networkUserNetId;
+			public OfferingTier tier;
+
+			public void Serialize(NetworkWriter writer)
+			{
+				writer.Write(networkUserNetId);
+				writer.Write((byte)tier);
+			}
+
+			public void Deserialize(NetworkReader reader)
+			{
+				networkUserNetId = reader.ReadNetworkId();
+				tier = (OfferingTier)reader.ReadByte();
+			}
+
+			public void OnReceived()
+			{
+				Log.Info($"[LunarRitual] RitualOfEssenceRequest.OnReceived. NetworkServer.active={NetworkServer.active}, netId={networkUserNetId.Value}, tier={tier}");
+				if (!NetworkServer.active)
+				{
+					Log.Warning("[LunarRitual] OnReceived ignored: not server");
+					return;
+				}
+
+				GameObject userObj = NetworkServer.FindLocalObject(networkUserNetId);
+				if (!userObj)
+				{
+					Log.Warning("[LunarRitual] OnReceived: FindLocalObject returned null (bad netId?)");
+					return;
+				}
+
+				NetworkUser user = userObj.GetComponent<NetworkUser>();
+				if (!user)
+				{
+					Log.Warning("[LunarRitual] OnReceived: NetworkUser component missing on object");
+					return;
+				}
+
+				ulong steamId = user.id.value;
+				if (serverConsumedThisRun.Contains(steamId))
+				{
+					Log.Info($"[LunarRitual] OnReceived: ritual already consumed this run. steamId={steamId}");
+					return;
+				}
+				int cost = tier switch
+				{
+					OfferingTier.Small => SmallCost,
+					OfferingTier.Medium => MediumCost,
+					OfferingTier.Grand => GrandCost,
+					_ => 0
+				};
+
+				if (cost <= 0)
+				{
+					Log.Warning("[LunarRitual] OnReceived: cost <= 0 (invalid tier)");
+					return;
+				}
+
+				int shards = GenesisShards.GetShards(steamId);
+				if (shards < cost)
+				{
+					Log.Info($"[LunarRitual] OnReceived: not enough shards. steamId={steamId} shards={shards} cost={cost}");
+					return;
+				}
+
+				var master = user.master;
+				if (!master || master.inventory == null)
+				{
+					Log.Warning("[LunarRitual] OnReceived: user.master or inventory is null");
+					return;
+				}
+
+				ItemIndex item = RitualOfEssenceServerRollItem(tier);
+				if (item == ItemIndex.None)
+				{
+					Log.Warning("[LunarRitual] OnReceived: failed to roll item (ItemIndex.None)");
+					return;
+				}
+
+				Log.Info($"[LunarRitual] OnReceived: granting item={item} cost={cost} steamId={steamId}");
+				GenesisShards.RemoveShards(steamId, cost);
+				master.inventory.GiveItem(item, 1);
+				serverConsumedThisRun.Add(steamId);
+
+				GenesisShards.SaveShards();
+				GenesisShardsUI.RefreshUI();
+			}
+		}
+
+		private struct RitualOfEgoRequest : INetMessage
+		{
+			public NetworkInstanceId networkUserNetId;
+			public OfferingTier tier;
+
+			public void Serialize(NetworkWriter writer)
+			{
+				writer.Write(networkUserNetId);
+				writer.Write((byte)tier);
+			}
+
+			public void Deserialize(NetworkReader reader)
+			{
+				networkUserNetId = reader.ReadNetworkId();
+				tier = (OfferingTier)reader.ReadByte();
+			}
+
+			public void OnReceived()
+			{
+				Log.Info($"[LunarRitual] RitualOfEgoRequest.OnReceived. NetworkServer.active={NetworkServer.active}, netId={networkUserNetId.Value}, tier={tier}");
+				if (!NetworkServer.active) return;
+
+				GameObject userObj = NetworkServer.FindLocalObject(networkUserNetId);
+				if (!userObj) return;
+
+				NetworkUser user = userObj.GetComponent<NetworkUser>();
+				if (!user) return;
+
+				ulong steamId = user.id.value;
+				if (serverConsumedThisRun.Contains(steamId))
+				{
+					Log.Info($"[LunarRitual] Ego: ritual already consumed this run. steamId={steamId}");
+					return;
+				}
+
+				int cost = tier switch
+				{
+					OfferingTier.Small => SmallCost,
+					OfferingTier.Medium => MediumCost,
+					OfferingTier.Grand => GrandCost,
+					_ => 0
+				};
+				if (cost <= 0) return;
+
+				int shards = GenesisShards.GetShards(steamId);
+				if (shards < cost)
+				{
+					Log.Info($"[LunarRitual] Ego: not enough shards. steamId={steamId} shards={shards} cost={cost}");
+					return;
+				}
+
+				var master = user.master;
+				if (!master || master.inventory == null) return;
+
+				ItemIndex egoItem = ItemCatalog.FindItemIndex("LunarSun");
+				if (egoItem == ItemIndex.None) return;
+
+				int min = tier switch
+				{
+					OfferingTier.Small => 1,
+					OfferingTier.Medium => 4,
+					OfferingTier.Grand => 7,
+					_ => 0
+				};
+				int maxInclusive = tier switch
+				{
+					OfferingTier.Small => 3,
+					OfferingTier.Medium => 6,
+					OfferingTier.Grand => 10,
+					_ => 0
+				};
+				if (min <= 0 || maxInclusive < min) return;
+
+				int stacks = Run.instance != null
+					? Run.instance.treasureRng.RangeInt(min, maxInclusive + 1)
+					: UnityEngine.Random.Range(min, maxInclusive + 1);
+
+				Log.Info($"[LunarRitual] Ego: granting {stacks}x {egoItem} cost={cost} steamId={steamId}");
+				GenesisShards.RemoveShards(steamId, cost);
+				master.inventory.GiveItem(egoItem, stacks);
+				serverConsumedThisRun.Add(steamId);
+
+				GenesisShards.SaveShards();
+				GenesisShardsUI.RefreshUI();
+			}
+		}
+
+		private static ItemIndex RitualOfEssenceServerRollItem(OfferingTier tier)
+		{
+			if (Run.instance == null) return ItemIndex.None;
+
+			ItemTier desiredTier = tier switch
+			{
+				OfferingTier.Small => ItemTier.Tier1,
+				OfferingTier.Medium => ItemTier.Tier2,
+				OfferingTier.Grand => ItemTier.Tier3,
+				_ => ItemTier.NoTier
+			};
+
+			if (desiredTier == ItemTier.NoTier) return ItemIndex.None;
+
+			// Robust roll: pick a random item from ItemCatalog by tier.
+			// This avoids relying on addressable drop tables that can vary across builds.
+			List<ItemIndex> candidates = new List<ItemIndex>(128);
+			foreach (ItemIndex idx in ItemCatalog.allItems)
+			{
+				ItemDef def = ItemCatalog.GetItemDef(idx);
+				if (def == null) continue;
+				if (def.hidden) continue;
+				if (def.tier != desiredTier) continue;
+				candidates.Add(idx);
+			}
+
+			if (candidates.Count == 0)
+			{
+				Log.Warning($"[LunarRitual] Essence roll: no candidates for tier={desiredTier}");
+				return ItemIndex.None;
+			}
+
+			int roll = Run.instance.treasureRng.RangeInt(0, candidates.Count);
+			ItemIndex chosen = candidates[roll];
+			Log.Info($"[LunarRitual] Essence roll: tier={desiredTier} candidates={candidates.Count} chosen={chosen}");
+			return chosen;
+		}
+
+		private static void EnsureDropTablesLoaded()
+		{
+			if (tier1DropTable && tier2DropTable && tier3DropTable) return;
+			try
+			{
+				if (!tier1DropTable)
+					tier1DropTable = Addressables.LoadAssetAsync<ExplicitPickupDropTable>("RoR2/Base/Common/dtTier1Item.asset").WaitForCompletion();
+				if (!tier2DropTable)
+					tier2DropTable = Addressables.LoadAssetAsync<ExplicitPickupDropTable>("RoR2/Base/Common/dtTier2Item.asset").WaitForCompletion();
+				if (!tier3DropTable)
+					tier3DropTable = Addressables.LoadAssetAsync<ExplicitPickupDropTable>("RoR2/Base/Common/dtTier3Item.asset").WaitForCompletion();
+			}
+			catch (Exception e)
+			{
+				Log.Error($"[LunarRitual] Failed to load drop tables for Ritual of Essence: {e.Message}");
+			}
+		}
+
+		private enum RitualType : byte
+		{
+			Essence = 0,
+			Ego = 1
+		}
+	}
 }
+
