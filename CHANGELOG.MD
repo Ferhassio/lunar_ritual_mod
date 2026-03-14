@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.1] - RiskOfOptions update
+
+### Added
+
+- Shard drop rate, Distribute Shards and debug options in menu
+- Default drop rate set 100% -> 1%
+
 ---
 
 ## [0.1.0] - Initial Release

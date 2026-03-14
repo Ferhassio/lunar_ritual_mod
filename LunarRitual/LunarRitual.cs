@@ -1,6 +1,7 @@
 using BepInEx;
 using BepInEx.Configuration;
 using R2API;
+using UnityEngine;
 
 namespace LunarRitual
 {
@@ -14,7 +15,7 @@ namespace LunarRitual
 		public const string PluginGUID = PluginAuthor + "." + PluginName;
 		public const string PluginAuthor = "LunarRitual";
 		public const string PluginName = "LunarRitual";
-		public const string PluginVersion = "1.0.0";
+		public const string PluginVersion = "0.1.1";
 
 		public static ConfigEntry<float> shardChance { get; set; }
 		public static ConfigEntry<float> shardMultiplier { get; set; }
@@ -25,19 +26,31 @@ namespace LunarRitual
 
 		public static PluginInfo pluginInfo;
 
+		// Convert shardChance from percentage (0-100) to probability (0-1)
+		public static float ShardChanceProbability
+		{
+			get
+			{
+				return Mathf.Clamp(shardChance.Value, 0f, 100f) / 100f;
+			}
+		}
+
 		public void Awake()
 		{
 			pluginInfo = Info;
 
-			shardChance = Config.Bind("Genesis Shards", "Initial Shard Chance", 1.0f, "Chance for first genesis shard to be dropped (0-1).");
-			shardMultiplier = Config.Bind("Genesis Shards", "Shard Chance Multiplier", 0.5f, "Value that chance is multiplied by after a shard is dropped (0-1).");
-			startingShards = Config.Bind("Genesis Shards", "Starting Shards", 0, "Shards that each player has at the start of a run, if 'Reset Shards Each Run' is enabled.");
-			teamShards = Config.Bind("Genesis Shards", "Distribute Shards", true, "All allies receive a genesis shard when one is dropped.");
-			noShardDroplet = Config.Bind("Genesis Shards", "No Shard Droplets", false, "Enemies emit a genesis shard effect instead of the regular droplet that is manually picked up.");
-			resetShards = Config.Bind("Genesis Shards", "Reset Shards Each Run", false, "Genesis shards are reset at the start of a run to the value determined by 'Starting Shards'.");
+			shardChance = Config.Bind("Genesis Shards", "Initial Shard Chance", 1.0f, "Chance for first genesis shard to be dropped (0-100%).");
+			shardMultiplier = Config.Bind("Debug", "Shard Chance Multiplier", 0.5f, "Value that chance is multiplied by after a shard is dropped (0-1).");
+			startingShards = Config.Bind("Debug", "Starting Shards", 0, "Shards that each player has at the start of a run, if 'Reset Shards Each Run' is enabled.");
+			teamShards = Config.Bind("Genesis Shards", "Distribute Shards", false, "All allies receive a genesis shard when one is dropped.");
+			noShardDroplet = Config.Bind("Debug", "No Shard Droplets", false, "Enemies emit a genesis shard effect instead of the regular droplet that is manually picked up.");
+			resetShards = Config.Bind("Debug", "Reset Shards Each Run", false, "Genesis shards are reset at the start of a run to the value determined by 'Starting Shards'.");
 
-			noShardDroplet.Value = false; //For Debug only
-			shardChance.Value = 1.0f; //For debug only
+			// Validate shardChance - clamp to maximum 100%
+			if (shardChance.Value > 100f)
+			{
+				shardChance.Value = 100f;
+			}
 
 			Log.Init(Logger);
 

@@ -16,11 +16,15 @@ The mod adds a new meta-progression mechanic called **Genesis Shards**, which ar
 
 ![](https://raw.githubusercontent.com/Ferhassio/lunar_ritual_mod/refs/heads/main/IMAGES/SmallShardsCounter.PNG)
 
+You can config some parametrs using RiskOfOptions menu:
+
+![](https://raw.githubusercontent.com/Ferhassio/lunar_ritual_mod/refs/heads/main/IMAGES/riskofoptions.PNG)
+
 ---
 
 ## Features
 
-- New persistent currency: **Genesis Shards** [`100% drop chance for tests`]
+- New persistent currency: **Genesis Shards** [`default chance 1%`]
 - Ritual system available at the start of every run
 - Multiple offering tiers with different rewards
 - Strong build-defining bonuses before the run even starts

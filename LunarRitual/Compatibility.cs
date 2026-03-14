@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using RiskOfOptions;
+using RiskOfOptions.OptionConfigs;
+using RiskOfOptions.Options;
 
 namespace LunarRitual
 {
@@ -24,6 +27,55 @@ namespace LunarRitual
 		public static void OptionsInit()
 		{
 			Log.Info("Risk of Options detected, adding options...");
+			
+			// Main settings
+			AddMainOptions();
+			
+			// Debug settings
+			AddDebugOptions();
+		}
+
+		[MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
+		private static void AddMainOptions()
+		{
+			// shardChance - Step slider for percentage (0-100%), default 1%
+			ModSettingsManager.AddOption(new StepSliderOption(LunarRitual.shardChance,
+				new StepSliderConfig
+				{
+					min = 0f,
+					max = 100f,
+					increment = 0.01f
+				}));
+			
+			// teamShards - Checkbox, default false
+			ModSettingsManager.AddOption(new CheckBoxOption(LunarRitual.teamShards));
+		}
+
+		[MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
+		private static void AddDebugOptions()
+		{
+			// shardMultiplier
+			ModSettingsManager.AddOption(new StepSliderOption(LunarRitual.shardMultiplier,
+				new StepSliderConfig
+				{
+					min = 0f,
+					max = 1f,
+					increment = 0.01f
+				}));
+			
+			// startingShards
+			ModSettingsManager.AddOption(new IntSliderOption(LunarRitual.startingShards,
+				new IntSliderConfig
+				{
+					min = 0,
+					max = 100
+				}));
+			
+			// noShardDroplet
+			ModSettingsManager.AddOption(new CheckBoxOption(LunarRitual.noShardDroplet));
+			
+			// resetShards
+			ModSettingsManager.AddOption(new CheckBoxOption(LunarRitual.resetShards));
 		}
 	}
 

@@ -80,7 +80,7 @@ namespace LunarRitual
 				ulong steamId = user.id.value;
 				if (!playerShardChance.ContainsKey(steamId))
 				{
-					playerShardChance[steamId] = LunarRitual.shardChance.Value;
+					playerShardChance[steamId] = LunarRitual.ShardChanceProbability;
 				}
 			}
 		}
@@ -135,8 +135,8 @@ namespace LunarRitual
 
 			if (!playerShardChance.ContainsKey(steamId))
 			{
-				playerShardChance[steamId] = LunarRitual.shardChance.Value;
-				Log.Warning($"[LunarRitual] Initial shard chance set to {LunarRitual.shardChance.Value}");
+				playerShardChance[steamId] = LunarRitual.ShardChanceProbability;
+				Log.Warning($"[LunarRitual] Initial shard chance set to {LunarRitual.ShardChanceProbability:F3}");
 			}
 
 			float roll = UnityEngine.Random.Range(0f, 1f);
