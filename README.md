@@ -184,7 +184,7 @@ Game Code: `HeadHunter`
 
 # Installation
 
-1. Download `LunarRitual-0.1.0.zip`
+1. Download from [Thunderstone](https://thunderstore.io/package/Ferhassio/LunarRitual/)
 
 2. Extract all files on ror2modman folder. Example: `C:\Users\Ferhassio\AppData\Roaming\r2modmanPlus-local\RiskOfRain2\profiles\test\BepInEx\plugins\LunarRitual`
 
