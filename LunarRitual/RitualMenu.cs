@@ -440,7 +440,7 @@ namespace LunarRitual
 			{
 				case RitualType.Essence:
 					ritualTitleText.text = "Ritual of Essence";
-					ritualDescText.text = "Receive a random item.\n1: Common • 5: Uncommon • 10: Legendary";
+					ritualDescText.text = "Receive random items.\n1: 1–5 Common • 5: 1–5 Uncommon • 10: 1–2 Legendary";
 					SetOfferingButtonsActive(true, true, true);
 					break;
 				case RitualType.Ego:
@@ -977,16 +977,50 @@ namespace LunarRitual
 					return;
 				}
 
-				ItemIndex item = RitualOfEssenceServerRollItem(tier);
-				if (item == ItemIndex.None)
+				// Determine number of items to grant based on tier
+				// Common: 1-5 items
+				// Uncommon: 1-5 items
+				// Legendary: 1-2 items
+				int minItemCount = tier switch
 				{
-					Log.Warning("[LunarRitual] OnReceived: failed to roll item (ItemIndex.None)");
+					OfferingTier.Small => 1,
+					OfferingTier.Medium => 1,
+					OfferingTier.Grand => 1,
+					_ => 0
+				};
+				int maxItemCountInclusive = tier switch
+				{
+					OfferingTier.Small => 5,
+					OfferingTier.Medium => 5,
+					OfferingTier.Grand => 2,
+					_ => 0
+				};
+				if (minItemCount <= 0 || maxItemCountInclusive < minItemCount) return;
+
+				int itemCount = Run.instance != null
+					? Run.instance.treasureRng.RangeInt(minItemCount, maxItemCountInclusive + 1)
+					: UnityEngine.Random.Range(minItemCount, maxItemCountInclusive + 1);
+
+				// Roll and grant multiple different random items
+				List<ItemIndex> grantedItems = new List<ItemIndex>();
+				for (int i = 0; i < itemCount; i++)
+				{
+					ItemIndex item = RitualOfEssenceServerRollItem(tier);
+					if (item != ItemIndex.None)
+					{
+						master.inventory.GiveItem(item, 1);
+						grantedItems.Add(item);
+					}
+				}
+
+				if (grantedItems.Count == 0)
+				{
+					Log.Warning("[LunarRitual] OnReceived: failed to roll any items");
 					return;
 				}
 
-				Log.Info($"[LunarRitual] OnReceived: granting item={item} cost={cost} steamId={steamId}");
+				Log.Info($"[LunarRitual] OnReceived: granting {grantedItems.Count} items ({string.Join(", ", grantedItems)}) cost={cost} steamId={steamId}");
 				GenesisShards.RemoveShards(steamId, cost);
-				master.inventory.GiveItem(item, 1);
 				serverConsumedThisRun.Add(steamId);
 
 				GenesisShards.SaveShards();

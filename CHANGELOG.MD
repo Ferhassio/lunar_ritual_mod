@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.2] - RiskOfOptions update
+
+### Added
+
+- Ritual of Essence
+
+Random item count increase:
+Common 1 -> 1-5
+Uncommon 1 -> 1-5
+Legendary 1 -> 1-2
+
+- Ritual of Lightness
+
+Feather stacks increase:
+1 -> 2-3
+2–4 -> 4 - 5
+5–10 -> 6-10
+
+---
+
 ## [0.1.1] - RiskOfOptions update
 
 ### Added

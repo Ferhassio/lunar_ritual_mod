@@ -65,9 +65,9 @@ Receive a random item based on the offering amount.
 
 | Offering | Reward |
 |---|---|
-| 1 coin | 1 random **common item** |
-| 5 coins | 1 random **uncommon item** |
-| 10 coins | 1 random **legendary item** |
+| 1 coin | 1-5 random **common item** |
+| 5 coins | 1-5 random **uncommon item** |
+| 10 coins | 1-2 random **legendary item** |
 
 ---
 
@@ -111,9 +111,9 @@ Game Code: `Feather`
 
 | Offering | Reward |
 |---|---|
-| 1 coin | 1 stack |
-| 5 coins | 2–4 stacks |
-| 10 coins | 5–10 stacks |
+| 1 coin | 2-3 stacks |
+| 5 coins | 4-5 stacks |
+| 10 coins | 6–10 stacks |
 
 ---
 
@@ -210,10 +210,7 @@ Thunderstone - [Mod](https://thunderstore.io/package/Ferhassio/LunarRitual/)
 
 # Future Plans
 
-- More rituals
-- Ritual reroll system
-- Genesis Shard Asset Pack
-- Configurable rewards
+- Check TODO channel in mod discord
 
 ---
 
