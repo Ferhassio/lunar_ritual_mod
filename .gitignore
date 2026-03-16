@@ -1,8 +1,7 @@
-/EXAMPLE
-/mod_info.MD
 /LunarRitual/bin
 /LunarRitual/libs
 /LunarRitual/obj
 /LunarRitual/obj/*
 LunarRitual/obj/
-obj
+LunarRitual.zip
+build_for_thunderstone.py

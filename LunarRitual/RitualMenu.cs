@@ -450,7 +450,7 @@ namespace LunarRitual
 					break;
 				case RitualType.Lightness:
 					ritualTitleText.text = "Ritual of Lightness";
-					ritualDescText.text = "Gain stacks of Hopoo Feathers.\n1: 1 • 5: 2–4 • 10: 5–10";
+					ritualDescText.text = "Gain stacks of Hopoo Feathers.\n1: 2–3 • 5: 4–5 • 10: 6–10";
 					SetOfferingButtonsActive(true, true, true);
 					break;
 				case RitualType.Blessing:
@@ -1140,15 +1140,15 @@ namespace LunarRitual
 
 				int min = tier switch
 				{
-					OfferingTier.Small =>1,
-					OfferingTier.Medium => 2,
-					OfferingTier.Grand => 5,
+					OfferingTier.Small => 2,
+					OfferingTier.Medium => 4,
+					OfferingTier.Grand => 6,
 					_ => 0
 				};
 				int maxInclusive = tier switch
 				{
-					OfferingTier.Small =>1,
-					OfferingTier.Medium =>4,
+					OfferingTier.Small => 3,
+					OfferingTier.Medium => 5,
 					OfferingTier.Grand => 10,
 					_ => 0
 				};
